@@ -1,0 +1,150 @@
+import axiosInstance from './axios';
+
+export const formAPI = {
+  // Get all forms
+  getForms: async (params = {}) => {
+    try {
+      console.log('🔍 FormAPI.getForms called with params:', params);
+      
+      const response = await axiosInstance.get('/forms', { params });
+      
+      console.log('✅ FormAPI.getForms response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ FormAPI.getForms error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          params: error.config?.params
+        }
+      });
+      
+      // Throw a more descriptive error
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to fetch forms'
+      );
+    }
+  },
+
+  // Get form by ID
+  getFormById: async (formId) => {
+    try {
+      console.log(`🔍 FormAPI.getFormById called for ID: ${formId}`);
+      
+      const response = await axiosInstance.get(`/forms/${formId}`);
+      
+      console.log('✅ FormAPI.getFormById response:', {
+        status: response.status,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`❌ FormAPI.getFormById error for ID ${formId}:`, {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to fetch form'
+      );
+    }
+  },
+
+  // Create form (admin only)
+  createForm: async (formData) => {
+    try {
+      console.log('🔍 FormAPI.createForm called with data:', formData);
+      
+      const response = await axiosInstance.post('/forms', formData);
+      
+      console.log('✅ FormAPI.createForm response:', {
+        status: response.status,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ FormAPI.createForm error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to create form'
+      );
+    }
+  },
+
+  // Update form (admin only)
+  updateForm: async (formId, formData) => {
+    try {
+      console.log(`🔍 FormAPI.updateForm called for ID: ${formId} with data:`, formData);
+      
+      const response = await axiosInstance.put(`/forms/${formId}`, formData);
+      
+      console.log('✅ FormAPI.updateForm response:', {
+        status: response.status,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`❌ FormAPI.updateForm error for ID ${formId}:`, {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to update form'
+      );
+    }
+  },
+
+  // Delete form (admin only)
+  deleteForm: async (formId) => {
+    try {
+      console.log(`🔍 FormAPI.deleteForm called for ID: ${formId}`);
+      
+      const response = await axiosInstance.delete(`/forms/${formId}`);
+      
+      console.log('✅ FormAPI.deleteForm response:', {
+        status: response.status,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`❌ FormAPI.deleteForm error for ID ${formId}:`, {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to delete form'
+      );
+    }
+  }
+};

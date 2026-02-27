@@ -1,0 +1,153 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
+import { formAPI } from '../../api/form.api';
+import { submissionAPI } from '../../api/submission.api';
+import DynamicForm from '../dynamic-form/DynamicForm';
+import Loader from '../common/Loader';
+import Alert from '../common/Alert';
+import Button from '../common/Button';
+import toast from 'react-hot-toast';
+
+const FormRenderer = () => {
+  const { formId } = useParams();
+  const navigate = useNavigate();
+  
+  const [form, setForm] = useState(null);
+  const [fields, setFields] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const fetchForm = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await formAPI.getFormById(formId);
+      setForm(response.data.form);
+      setFields(response.data.fields);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load form');
+      console.error('Error fetching form:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [formId]);
+
+  useEffect(() => {
+    fetchForm();
+  }, [fetchForm]);
+
+  const handleSubmit = async (formData) => {
+    try {
+      // Extract files from formData
+      const files = [];
+      const dataToSend = { ...formData };
+      
+      fields.forEach(field => {
+        if (field.fieldType === 'file' && formData[field.name] instanceof File) {
+          files.push(formData[field.name]);
+          dataToSend[field.name] = formData[field.name].name; // Store filename
+        }
+      });
+
+      await submissionAPI.submitForm(formId, dataToSend, files);
+      setSubmitted(true);
+      toast.success('Form submitted successfully!');
+    } catch (err) {
+      toast.error('Failed to submit form');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader size="lg" text="Loading form..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Alert type="error" title="Error" message={error} />
+        <div className="mt-4">
+          <Button
+            variant="outline"
+            icon={FaArrowLeft}
+            onClick={() => navigate(-1)}
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="card text-center">
+          <div className="card-body py-12">
+            <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <FaCheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Thank You!</h2>
+            <p className="mt-2 text-gray-600">
+              Your submission has been received successfully.
+            </p>
+            <div className="mt-8 flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/forms')}
+              >
+                View Other Forms
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => setSubmitted(false)}
+              >
+                Submit Another Response
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="max-w-3xl mx-auto">
+        <Button
+          variant="outline"
+          icon={FaArrowLeft}
+          onClick={() => navigate(-1)}
+          className="mb-6"
+        >
+          Back to Forms
+        </Button>
+        
+        <DynamicForm
+          form={form}
+          fields={fields}
+          onSubmit={handleSubmit}
+          submitButtonText="Submit Form"
+        />
+        
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>
+            This form was created by {form.createdBy?.firstName} {form.createdBy?.lastName}
+          </p>
+          {form.settings?.requireLogin && (
+            <p className="mt-1">
+              Login is required to submit this form
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FormRenderer;
