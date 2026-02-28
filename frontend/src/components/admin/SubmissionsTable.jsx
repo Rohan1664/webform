@@ -10,14 +10,14 @@ import {
   FaCalendar,
   FaFileExcel,
   FaFileCsv
-} from 'react-icons/fa'; // Removed unused FaFileExport and FaChartBar
+} from 'react-icons/fa';
 import { submissionAPI } from '../../api/submission.api';
-import { formAPI } from '../../api/form.api'; // Fixed import path
+import { formAPI } from '../../api/form.api';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
 import Alert from '../common/Alert';
-import { formatDate, downloadFile } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 const SubmissionsTable = () => {
@@ -40,7 +40,73 @@ const SubmissionsTable = () => {
     totalPages: 1,
   });
 
-  // Memoize fetchSubmissions with all dependencies
+  // Export function with better error handling
+  const handleExport = async (format = 'excel') => {
+    if (!formId) {
+      toast.error('Form ID is missing');
+      return;
+    }
+
+    const toastId = toast.loading(`Preparing ${format.toUpperCase()} export...`);
+    
+    try {
+      console.log(`Exporting ${format} for form:`, formId);
+      
+      const response = await submissionAPI.exportSubmissions(formId, format);
+      
+      // Check if we got data
+      if (!response.data || response.data.size === 0) {
+        throw new Error('No data received from server');
+      }
+      
+      // Create filename
+      const date = new Date();
+      const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}_${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}`;
+      const formTitle = form?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'submissions';
+      const extension = format === 'excel' ? 'xlsx' : 'csv';
+      const filename = `${formTitle}_submissions_${timestamp}.${extension}`;
+      
+      console.log('Downloading file:', filename);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`${format.toUpperCase()} export completed successfully!`, { id: toastId });
+    } catch (err) {
+      console.error('Export error details:', err);
+      
+      let errorMessage = `Failed to export as ${format.toUpperCase()}`;
+      
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = 'Unauthorized. Please login again.';
+        } else if (err.response.status === 403) {
+          errorMessage = 'You do not have permission to export.';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Export endpoint not found.';
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage, { id: toastId });
+    }
+  };
+
+  // Memoize fetchSubmissions
   const fetchSubmissions = useCallback(async () => {
     if (!formId) {
       setError('Form ID is required');
@@ -106,23 +172,6 @@ const SubmissionsTable = () => {
       fetchSubmissions();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete submission');
-    }
-  };
-
-  const handleExport = async (format = 'excel') => {
-    try {
-      toast.loading(`Exporting submissions...`, { id: 'export' });
-      const response = await submissionAPI.exportSubmissions(formId, format);
-      
-      const filename = `${form?.title?.replace(/\s+/g, '_') || 'submissions'}_${formatDate(new Date(), 'YYYYMMDD_HHmm')}.${format === 'excel' ? 'xlsx' : 'csv'}`;
-      const mimeType = format === 'excel' 
-        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        : 'text/csv';
-      
-      downloadFile(response.data, filename, mimeType);
-      toast.success('Export completed successfully', { id: 'export' });
-    } catch (err) {
-      toast.error('Failed to export submissions', { id: 'export' });
     }
   };
 
@@ -193,6 +242,7 @@ const SubmissionsTable = () => {
             variant="outline" 
             icon={FaFileCsv} 
             onClick={() => handleExport('csv')}
+            disabled={submissions.length === 0}
           >
             CSV
           </Button>
@@ -200,6 +250,7 @@ const SubmissionsTable = () => {
             variant="outline" 
             icon={FaFileExcel} 
             onClick={() => handleExport('excel')}
+            disabled={submissions.length === 0}
           >
             Excel
           </Button>
