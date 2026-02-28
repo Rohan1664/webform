@@ -1,17 +1,24 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Use the environment variable or fallback to localhost
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Log the API URL in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 API URL:', API_URL);
+}
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // Add timeout to prevent hanging requests
+  timeout: 30000, // Increased timeout for serverless functions (30 seconds)
+  withCredentials: true, // Important for cookies if you're using them
 });
 
-// Request interceptor - Enhanced with logging
+// Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -21,7 +28,7 @@ axiosInstance.interceptors.request.use(
     
     // Log all requests in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.url}`, {
+      console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
         params: config.params,
         data: config.data,
         headers: {
@@ -39,7 +46,7 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor - Enhanced with logging
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => {
     // Log all responses in development
@@ -53,18 +60,16 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Log all errors in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('❌ Response error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        code: error.code
-      });
-    }
+    // Log all errors
+    console.error('❌ Response error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
 
     const originalRequest = error.config;
 
@@ -85,8 +90,8 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       
       // Don't try to refresh token on login page or auth endpoints
-      if (originalRequest.url.includes('/auth/login') || 
-          originalRequest.url.includes('/auth/register')) {
+      if (originalRequest.url?.includes('/auth/login') || 
+          originalRequest.url?.includes('/auth/register')) {
         return Promise.reject(error);
       }
       
@@ -135,11 +140,11 @@ axiosInstance.interceptors.response.use(
       
       // Don't show toast for 401 as we handle it above
       if (status !== 401) {
-        const errorMessage = data.message || data.error || 'An error occurred';
+        const errorMessage = data?.message || data?.error || 'An error occurred';
         
         switch (status) {
           case 400:
-            if (data.errors) {
+            if (data?.errors) {
               data.errors.forEach(err => toast.error(err.msg || err));
             } else {
               toast.error(errorMessage);
