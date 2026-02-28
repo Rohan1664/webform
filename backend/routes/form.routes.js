@@ -1,36 +1,62 @@
 const express = require('express');
 const router = express.Router();
 const formController = require('../controllers/form.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuth } = require('../middleware/auth.middleware');
 const roleCheck = require('../middleware/role.middleware');
 const validate = require('../middleware/validation.middleware');
 const { formValidator } = require('../utils/validators');
 
-// Public routes (forms listing and viewing)
-// @route   GET /api/forms
-// @desc    Get all active forms
-// @access  Public (with optional auth)
-router.get('/', formController.getAllForms);
+// ==================== Public Routes ====================
 
-// @route   GET /api/forms/:formId
-// @desc    Get single form by ID
-// @access  Public (with optional auth)
-router.get('/:formId', formController.getFormById);
+/**
+ * @route   GET /api/forms
+ * @desc    Get all active forms with pagination and search
+ * @access  Public (with optional auth)
+ */
+router.get('/', optionalAuth, formController.getAllForms);
 
-// Protected routes (admin only)
-// @route   POST /api/forms
-// @desc    Create new form (admin only)
-// @access  Private/Admin
-router.post('/', authenticate, roleCheck('admin'), validate(formValidator), formController.createForm);
+/**
+ * @route   GET /api/forms/:formId
+ * @desc    Get single form by ID with its fields
+ * @access  Public (with optional auth)
+ */
+router.get('/:formId', optionalAuth, formController.getFormById);
 
-// @route   PUT /api/forms/:formId
-// @desc    Update form (admin only)
-// @access  Private/Admin
-router.put('/:formId', authenticate, roleCheck('admin'), validate(formValidator), formController.updateForm);
+// ==================== Protected Admin Routes ====================
 
-// @route   DELETE /api/forms/:formId
-// @desc    Delete form (admin only)
-// @access  Private/Admin
-router.delete('/:formId', authenticate, roleCheck('admin'), formController.deleteForm);
+/**
+ * @route   POST /api/forms
+ * @desc    Create a new form
+ * @access  Private/Admin
+ */
+router.post('/', 
+  authenticate, 
+  roleCheck('admin'), 
+  validate(formValidator), 
+  formController.createForm
+);
+
+/**
+ * @route   PUT /api/forms/:formId
+ * @desc    Update an existing form
+ * @access  Private/Admin
+ */
+router.put('/:formId', 
+  authenticate, 
+  roleCheck('admin'), 
+  validate(formValidator), 
+  formController.updateForm
+);
+
+/**
+ * @route   DELETE /api/forms/:formId
+ * @desc    Soft delete a form (set isActive to false)
+ * @access  Private/Admin
+ */
+router.delete('/:formId', 
+  authenticate, 
+  roleCheck('admin'), 
+  formController.deleteForm
+);
 
 module.exports = router;

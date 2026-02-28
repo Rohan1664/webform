@@ -1,3 +1,4 @@
+const connectDB = require('../config/db');
 const XLSX = require('xlsx');
 const User = require('../models/User.model');
 
@@ -25,6 +26,8 @@ const formatDate = (date, format = 'YYYY-MM-DD HH:mm:ss') => {
 // Export users to Excel
 exports.exportUsersToExcel = async (req, res) => {
   try {
+    await connectDB();
+    
     const { search, role, status } = req.query;
     
     // Build query
@@ -108,7 +111,7 @@ exports.exportUsersToExcel = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error exporting users to Excel',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -116,6 +119,8 @@ exports.exportUsersToExcel = async (req, res) => {
 // Export users to CSV
 exports.exportUsersToCSV = async (req, res) => {
   try {
+    await connectDB();
+    
     const { search, role, status } = req.query;
     
     // Build query
@@ -199,7 +204,7 @@ exports.exportUsersToCSV = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error exporting users to CSV',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

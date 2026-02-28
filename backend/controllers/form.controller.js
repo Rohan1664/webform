@@ -1,11 +1,13 @@
+const connectDB = require('../config/db');
 const Form = require('../models/Form.model');
 const FormField = require('../models/FormField.model');
 const FormSubmission = require('../models/FormSubmission.model');
-const { multipleUpload } = require('../config/multer.config');
 
 // Create new form (admin only)
 exports.createForm = async (req, res) => {
   try {
+    await connectDB();
+    
     const { title, description, settings, fields } = req.body;
     
     // Validate required fields
@@ -64,7 +66,7 @@ exports.createForm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating form',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -72,6 +74,8 @@ exports.createForm = async (req, res) => {
 // Get all forms - FIXED VERSION
 exports.getAllForms = async (req, res) => {
   try {
+    await connectDB();
+    
     const { page = 1, limit = 10, search = '', activeOnly = 'true' } = req.query;
     
     // Base query - only active forms
@@ -126,7 +130,7 @@ exports.getAllForms = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching forms',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -134,6 +138,8 @@ exports.getAllForms = async (req, res) => {
 // Get single form by ID
 exports.getFormById = async (req, res) => {
   try {
+    await connectDB();
+    
     const { formId } = req.params;
     
     const form = await Form.findOne({ 
@@ -166,7 +172,7 @@ exports.getFormById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching form',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -174,6 +180,8 @@ exports.getFormById = async (req, res) => {
 // Update form (admin only)
 exports.updateForm = async (req, res) => {
   try {
+    await connectDB();
+    
     const { formId } = req.params;
     const { title, description, settings, fields } = req.body;
     
@@ -267,7 +275,7 @@ exports.updateForm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating form',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -275,6 +283,8 @@ exports.updateForm = async (req, res) => {
 // Delete form (admin only)
 exports.deleteForm = async (req, res) => {
   try {
+    await connectDB();
+    
     const { formId } = req.params;
     
     const form = await Form.findOne({ 
@@ -309,7 +319,7 @@ exports.deleteForm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting form',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

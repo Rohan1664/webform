@@ -4,8 +4,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
-const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
@@ -25,43 +23,52 @@ const { errorHandler, notFound } = require('./middleware/error.middleware');
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
-// Ensure uploads directory exists
-const uploadDir = process.env.UPLOAD_PATH || './uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Rate limiting (disable for serverless or configure appropriately)
+if (process.env.NODE_ENV !== 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+  });
+  app.use(limiter);
 }
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-
-// Apply rate limiting to all requests
-app.use(limiter);
-
 // Security headers
-app.use(helmet());
-
-// Enable CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
 // Request logging
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, uploadDir)));
+// Database connection middleware for serverless
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -75,6 +82,7 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
     uptime: process.uptime()
   });
 });
@@ -85,7 +93,13 @@ app.get('/', (req, res) => {
     success: true,
     message: 'Welcome to Dynamic Forms API',
     version: '1.0.0',
-    documentation: '/api-docs (coming soon)'
+    endpoints: {
+      auth: '/api/auth',
+      admin: '/api/admin',
+      forms: '/api/forms',
+      submissions: '/api/submissions',
+      health: '/api/health'
+    }
   });
 });
 
@@ -95,22 +109,25 @@ app.use(notFound);
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
+// For local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-  server.close(() => process.exit(1));
-});
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+    server.close(() => process.exit(1));
+  });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  server.close(() => process.exit(1));
-});
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    server.close(() => process.exit(1));
+  });
+}
 
+// Export for Vercel
 module.exports = app;

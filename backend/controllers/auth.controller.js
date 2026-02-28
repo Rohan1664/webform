@@ -1,3 +1,4 @@
+const connectDB = require('../config/db');
 const User = require('../models/User.model');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
@@ -7,7 +8,7 @@ const generateToken = (userId, role) => {
   return jwt.sign(
     { userId, role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    { expiresIn: process.env.JWT_EXPIRE || '24h' }
   );
 };
 
@@ -16,13 +17,15 @@ const generateRefreshToken = (userId, role) => {
   return jwt.sign(
     { userId, role },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRE }
+    { expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d' }
   );
 };
 
 // Register User
 exports.register = async (req, res) => {
   try {
+    await connectDB(); // Ensure database is connected
+    
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -43,7 +46,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Create new user (role will be validated by mongoose enum)
+    // Create new user
     const user = new User({
       email,
       password,
@@ -83,7 +86,7 @@ exports.register = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error registering user',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -91,6 +94,8 @@ exports.register = async (req, res) => {
 // Login User
 exports.login = async (req, res) => {
   try {
+    await connectDB(); // Ensure database is connected
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ 
@@ -132,7 +137,7 @@ exports.login = async (req, res) => {
     const refreshToken = generateRefreshToken(user._id, user.role);
 
     // Update last login
-    user.updatedAt = Date.now();
+    user.lastLogin = Date.now();
     await user.save();
 
     // Remove password from response
@@ -142,7 +147,8 @@ exports.login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin
     };
 
     res.json({
@@ -160,7 +166,7 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error logging in',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -168,6 +174,8 @@ exports.login = async (req, res) => {
 // Refresh Token
 exports.refreshToken = async (req, res) => {
   try {
+    await connectDB();
+    
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
@@ -214,7 +222,7 @@ exports.refreshToken = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error refreshing token',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -222,6 +230,8 @@ exports.refreshToken = async (req, res) => {
 // Get Current User
 exports.getCurrentUser = async (req, res) => {
   try {
+    await connectDB();
+    
     const user = await User.findById(req.user.userId).select('-password');
     
     if (!user) {
@@ -241,15 +251,13 @@ exports.getCurrentUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching user',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
 // Logout
 exports.logout = (req, res) => {
-  // In a production app, you might want to blacklist the token
-  // For now, we'll just clear it on the client side
   res.json({
     success: true,
     message: 'Logout successful'

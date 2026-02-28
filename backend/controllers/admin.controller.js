@@ -1,3 +1,4 @@
+const connectDB = require('../config/db');
 const User = require('../models/User.model');
 const Form = require('../models/Form.model');
 const FormSubmission = require('../models/FormSubmission.model');
@@ -5,6 +6,8 @@ const FormSubmission = require('../models/FormSubmission.model');
 // Get all users (admin only)
 exports.getAllUsers = async (req, res) => {
   try {
+    await connectDB();
+    
     const { page = 1, limit = 10, search = '', role = '' } = req.query;
     const query = {};
     
@@ -57,7 +60,7 @@ exports.getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching users',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -65,6 +68,8 @@ exports.getAllUsers = async (req, res) => {
 // Update user status (admin only)
 exports.updateUserStatus = async (req, res) => {
   try {
+    await connectDB();
+    
     const { userId } = req.params;
     const { isActive } = req.body;
     
@@ -100,7 +105,7 @@ exports.updateUserStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating user status',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -108,6 +113,8 @@ exports.updateUserStatus = async (req, res) => {
 // Get admin dashboard statistics
 exports.getDashboardStats = async (req, res) => {
   try {
+    await connectDB();
+    
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalAdmins = await User.countDocuments({ role: 'admin' });
     const totalForms = await Form.countDocuments();
@@ -157,7 +164,7 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching dashboard statistics',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

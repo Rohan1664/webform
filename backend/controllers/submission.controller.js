@@ -1,12 +1,13 @@
+const connectDB = require('../config/db');
 const Form = require('../models/Form.model');
 const FormField = require('../models/FormField.model');
 const FormSubmission = require('../models/FormSubmission.model');
-const path = require('path');
-const fs = require('fs');
 
 // Submit form response
 exports.submitForm = async (req, res) => {
   try {
+    await connectDB();
+    
     const { formId } = req.params;
     const submissionData = req.body;
     const files = req.files;
@@ -104,60 +105,32 @@ exports.submitForm = async (req, res) => {
       }
     }
     
-    // Handle file uploads
+    // Handle file uploads (for Vercel - files are in memory, not on disk)
     const fileEntries = [];
     if (files && files.files) {
+      // For Vercel deployment, you would upload these files to cloud storage
+      // This is a simplified version - you should implement cloud storage
       for (const file of files.files) {
         const fieldName = file.fieldname;
         const field = formFields.find(f => f.name === fieldName);
         
         if (field && field.fieldType === 'file') {
-          // Validate file type
-          if (field.validation.fileTypes && field.validation.fileTypes.length > 0) {
-            const fileExt = path.extname(file.originalname).toLowerCase().slice(1);
-            const allowedTypes = field.validation.fileTypes.map(t => t.toLowerCase());
-            
-            if (!allowedTypes.includes(fileExt) && !allowedTypes.includes(file.mimetype)) {
-              errors.push(`File type not allowed for ${field.label}`);
-              // Delete the uploaded file
-              fs.unlinkSync(file.path);
-              continue;
-            }
-          }
-          
-          // Validate file size
-          if (field.validation.maxFileSize && file.size > field.validation.maxFileSize) {
-            errors.push(`File too large for ${field.label}. Maximum size: ${field.validation.maxFileSize} bytes`);
-            fs.unlinkSync(file.path);
-            continue;
-          }
-          
           fileEntries.push({
             fieldName: field.name,
             originalName: file.originalname,
-            fileName: file.filename,
-            filePath: file.path,
+            fileName: file.originalname, // Simplified
+            filePath: '', // No file path in memory storage
             fileSize: file.size,
             mimeType: file.mimetype
           });
           
-          validatedData.set(field.name, file.filename);
-        } else {
-          // Delete file if field not found
-          fs.unlinkSync(file.path);
+          validatedData.set(field.name, file.originalname);
         }
       }
     }
     
     // Return validation errors if any
     if (errors.length > 0) {
-      // Clean up uploaded files
-      fileEntries.forEach(entry => {
-        if (fs.existsSync(entry.filePath)) {
-          fs.unlinkSync(entry.filePath);
-        }
-      });
-      
       return res.status(400).json({
         success: false,
         message: 'Validation errors',
@@ -204,7 +177,7 @@ exports.submitForm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error submitting form',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -212,6 +185,8 @@ exports.submitForm = async (req, res) => {
 // Get submissions for a form (admin only)
 exports.getFormSubmissions = async (req, res) => {
   try {
+    await connectDB();
+    
     const { formId } = req.params;
     const { 
       page = 1, 
@@ -288,7 +263,7 @@ exports.getFormSubmissions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching submissions',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -296,6 +271,8 @@ exports.getFormSubmissions = async (req, res) => {
 // Get single submission
 exports.getSubmissionById = async (req, res) => {
   try {
+    await connectDB();
+    
     const { submissionId } = req.params;
     
     const submission = await FormSubmission.findById(submissionId)
@@ -340,7 +317,7 @@ exports.getSubmissionById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching submission',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -348,6 +325,8 @@ exports.getSubmissionById = async (req, res) => {
 // Delete submission (admin only)
 exports.deleteSubmission = async (req, res) => {
   try {
+    await connectDB();
+    
     const { submissionId } = req.params;
     
     const submission = await FormSubmission.findById(submissionId);
@@ -372,15 +351,6 @@ exports.deleteSubmission = async (req, res) => {
       });
     }
     
-    // Delete associated files
-    if (submission.files && submission.files.length > 0) {
-      submission.files.forEach(file => {
-        if (fs.existsSync(file.filePath)) {
-          fs.unlinkSync(file.filePath);
-        }
-      });
-    }
-    
     await FormSubmission.findByIdAndDelete(submissionId);
     
     res.json({
@@ -393,7 +363,7 @@ exports.deleteSubmission = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting submission',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
