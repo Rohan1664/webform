@@ -24,7 +24,7 @@ export const adminAPI = {
     const response = await axiosInstance.get(`/admin/forms/${formId}/submissions/download/excel`, {
       responseType: 'blob',
     });
-    return response.data;
+    return response; // Return full response, not just data
   },
 
   // Download submissions as CSV
@@ -32,6 +32,24 @@ export const adminAPI = {
     const response = await axiosInstance.get(`/admin/forms/${formId}/submissions/download/csv`, {
       responseType: 'blob',
     });
-    return response.data;
+    return response; // Return full response, not just data
+  },
+
+  // Export users to Excel
+  exportUsersToExcel: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/users/export/excel', {
+      params,
+      responseType: 'blob',
+    });
+    return response; // Return full response, not just data
+  },
+
+  // Export users to CSV
+  exportUsersToCSV: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/users/export/csv', {
+      params,
+      responseType: 'blob',
+    });
+    return response; // Return full response, not just data
   }
 };
