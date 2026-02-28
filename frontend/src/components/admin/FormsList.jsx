@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FaPlus, 
   FaEdit, 
   FaTrash, 
-//   FaEye, 
+  FaEye, 
   FaClipboardList,
   FaSearch,
-//   FaFileExport,
   FaToggleOn,
   FaToggleOff
 } from 'react-icons/fa';
 import { formAPI } from '../../api/form.api';
-// import { submissionAPI } from '../../api/submission.api';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Loader from '../common/Loader';
@@ -25,7 +23,7 @@ const FormsList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all, active, inactive
+  const [filter, setFilter] = useState('all');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -33,11 +31,7 @@ const FormsList = () => {
     totalPages: 1,
   });
 
-  useEffect(() => {
-    fetchForms();
-  }, [pagination.page, search, filter]);
-
-  const fetchForms = async () => {
+  const fetchForms = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -57,7 +51,11 @@ const FormsList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, search, filter]);
+
+  useEffect(() => {
+    fetchForms();
+  }, [fetchForms]);
 
   const handleDeleteForm = async (formId, formTitle) => {
     if (!window.confirm(`Are you sure you want to delete the form "${formTitle}"? This action cannot be undone.`)) {
@@ -67,7 +65,7 @@ const FormsList = () => {
     try {
       await formAPI.deleteForm(formId);
       toast.success('Form deleted successfully');
-      fetchForms(); // Refresh the list
+      fetchForms();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete form');
     }
@@ -77,7 +75,7 @@ const FormsList = () => {
     try {
       await formAPI.updateForm(formId, { isActive: !currentStatus });
       toast.success(`Form ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      fetchForms(); // Refresh the list
+      fetchForms();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update form status');
     }
@@ -96,28 +94,6 @@ const FormsList = () => {
     setFilter(newFilter);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
-
-//   const handleExportSubmissions = async (formId, formTitle, format = 'excel') => {
-//     try {
-//       toast.loading(`Exporting ${formTitle} submissions...`, { id: 'export' });
-      
-//       // You'll need to implement these endpoints in your backend
-//       const response = await submissionAPI.exportSubmissions(formId, format);
-      
-//       // Create download link
-//       const url = window.URL.createObjectURL(new Blob([response.data]));
-//       const link = document.createElement('a');
-//       link.href = url;
-//       link.setAttribute('download', `${formTitle}_submissions.${format === 'excel' ? 'xlsx' : 'csv'}`);
-//       document.body.appendChild(link);
-//       link.click();
-//       link.remove();
-      
-//       toast.success('Export completed successfully', { id: 'export' });
-//     } catch (err) {
-//       toast.error('Failed to export submissions', { id: 'export' });
-//     }
-//   };
 
   if (loading && forms.length === 0) {
     return (
@@ -200,7 +176,6 @@ const FormsList = () => {
                 <th className="table-header-cell">Form Details</th>
                 <th className="table-header-cell">Status</th>
                 <th className="table-header-cell">Submissions</th>
-                {/* <th className="table-header-cell">Settings</th> */}
                 <th className="table-header-cell">Created</th>
                 <th className="table-header-cell">Actions</th>
               </tr>
@@ -208,7 +183,7 @@ const FormsList = () => {
             <tbody className="divide-y divide-gray-200">
               {forms.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center">
                       <FaClipboardList className="h-12 w-12 text-gray-400 mb-4" />
                       <p className="text-lg font-medium text-gray-900 mb-2">No forms found</p>
@@ -267,20 +242,6 @@ const FormsList = () => {
                         </div>
                       )}
                     </td>
-                    {/* <td className="table-cell">
-                      <div className="space-y-1">
-                        {form.settings?.requireLogin && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 mr-1">
-                            Login Required
-                          </span>
-                        )}
-                        {form.settings?.allowMultipleSubmissions && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
-                            Multiple
-                          </span>
-                        )}
-                      </div>
-                    </td> */}
                     <td className="table-cell">
                       <div className="text-sm text-gray-900">
                         {formatDate(form.createdAt, 'MMM DD, YYYY')}
@@ -312,22 +273,14 @@ const FormsList = () => {
                           </button>
                         </Link>
                         
-                        {/* <Link to={`/admin/submissions/${form._id}`}>
+                        <Link to={`/admin/submissions/${form._id}`}>
                           <button
                             className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50"
                             title="View Submissions"
                           >
                             <FaEye className="h-4 w-4" />
                           </button>
-                        </Link> */}
-{/*                         
-                        <button
-                          onClick={() => handleExportSubmissions(form._id, form.title, 'excel')}
-                          className="p-2 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-purple-50"
-                          title="Export Submissions"
-                        >
-                          <FaFileExport className="h-4 w-4" />
-                        </button> */}
+                        </Link>
                         
                         <button
                           onClick={() => handleDeleteForm(form._id, form.title)}
@@ -432,7 +385,7 @@ const FormsList = () => {
           </div>
         </div>
         
-        {/* <div className="card bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+        <div className="card bg-gradient-to-r from-purple-500 to-purple-600 text-white">
           <div className="card-body">
             <div className="flex items-center justify-between">
               <div>
@@ -444,7 +397,7 @@ const FormsList = () => {
               <FaEye className="h-10 w-10 text-purple-200" />
             </div>
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   );
