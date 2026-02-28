@@ -2,6 +2,7 @@ const XLSX = require('xlsx');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const FormSubmission = require('../models/FormSubmission.model');
 const FormField = require('../models/FormField.model');
+const Form = require('../models/Form.model'); // Add this import
 const { formatDate } = require('./helpers');
 
 // Generate Excel file from submissions
@@ -129,16 +130,21 @@ exports.downloadSubmissionsExcel = async (req, res) => {
   try {
     const { formId } = req.params;
     
-    // Get form and verify ownership
-    const form = await FormSubmission.findOne({ 
-      _id: formId,
-      createdBy: req.user.userId 
-    });
+    // Fix: Find Form, not FormSubmission
+    const form = await Form.findById(formId);
     
     if (!form) {
       return res.status(404).json({
         success: false,
-        message: 'Form not found or unauthorized'
+        message: 'Form not found'
+      });
+    }
+    
+    // Check if user is admin and owns the form
+    if (form.createdBy.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to export this form'
       });
     }
     
@@ -153,8 +159,10 @@ exports.downloadSubmissionsExcel = async (req, res) => {
     const excelBuffer = await generateExcel(submissions, formFields);
     
     // Set response headers for file download
+    const filename = `${form.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_submissions_${Date.now()}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=submissions_${formId}_${Date.now()}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', excelBuffer.length);
     
     res.send(excelBuffer);
     
@@ -173,16 +181,21 @@ exports.downloadSubmissionsCSV = async (req, res) => {
   try {
     const { formId } = req.params;
     
-    // Get form and verify ownership
-    const form = await FormSubmission.findOne({ 
-      _id: formId,
-      createdBy: req.user.userId 
-    });
+    // Fix: Find Form, not FormSubmission
+    const form = await Form.findById(formId);
     
     if (!form) {
       return res.status(404).json({
         success: false,
-        message: 'Form not found or unauthorized'
+        message: 'Form not found'
+      });
+    }
+    
+    // Check if user is admin and owns the form
+    if (form.createdBy.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to export this form'
       });
     }
     
@@ -197,8 +210,10 @@ exports.downloadSubmissionsCSV = async (req, res) => {
     const csvContent = await generateCSV(submissions, formFields);
     
     // Set response headers for file download
+    const filename = `${form.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_submissions_${Date.now()}.csv`;
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=submissions_${formId}_${Date.now()}.csv`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', Buffer.byteLength(csvContent));
     
     res.send(csvContent);
     
