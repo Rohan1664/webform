@@ -67,10 +67,38 @@ export const submissionAPI = {
     if (!formId) {
       throw new Error('Form ID is required');
     }
-    const response = await axiosInstance.get(
-      `/admin/forms/${formId}/submissions/download/${format}`,
-      { responseType: 'blob' }
-    );
-    return response;
+    
+    console.log(`Calling export API: /admin/forms/${formId}/submissions/download/${format}`);
+    
+    try {
+      const response = await axiosInstance.get(
+        `/admin/forms/${formId}/submissions/download/${format}`,
+        { 
+          responseType: 'blob',
+          timeout: 30000 // 30 seconds timeout for large exports
+        }
+      );
+      
+      console.log('Export API response status:', response.status);
+      console.log('Export API response data size:', response.data?.size);
+      
+      return response;
+    } catch (error) {
+      console.error('Export API error:', error);
+      
+      // Try to get error message from response
+      if (error.response && error.response.data instanceof Blob) {
+        const text = await error.response.data.text();
+        console.error('Error details:', text);
+        try {
+          const json = JSON.parse(text);
+          error.message = json.message || error.message;
+        } catch (e) {
+          error.message = text || error.message;
+        }
+      }
+      
+      throw error;
+    }
   }
 };
