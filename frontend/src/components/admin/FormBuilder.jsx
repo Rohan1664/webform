@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, 
   FaTrash, 
@@ -43,14 +43,10 @@ const FormBuilder = () => {
     submitButtonText: 'Submit'
   });
 
-  // Fetch form data if in edit mode
-  useEffect(() => {
-    if (isEditMode) {
-      fetchFormData();
-    }
-  }, [formId]);
-
-  const fetchFormData = async () => {
+  // Memoize fetchFormData with all dependencies
+  const fetchFormData = useCallback(async () => {
+    if (!isEditMode || !formId) return;
+    
     try {
       setLoading(true);
       const response = await formAPI.getFormById(formId);
@@ -82,10 +78,13 @@ const FormBuilder = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isEditMode, formId, navigate]);
+
+  useEffect(() => {
+    fetchFormData();
+  }, [fetchFormData]);
 
   const handlePreview = () => {
-    // Use the formId from URL params directly
     if (formId) {
       window.open(`/forms/${formId}`, '_blank');
     } else {
@@ -112,7 +111,7 @@ const FormBuilder = () => {
         pattern: '',
         patternMessage: '',
         fileTypes: [],
-        maxFileSize: 5 * 1024 * 1024, // 5MB
+        maxFileSize: 5 * 1024 * 1024,
         maxFileCount: 1
       },
       layout: {
@@ -164,7 +163,6 @@ const FormBuilder = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Update order property
     const reorderedItems = items.map((item, index) => ({
       ...item,
       order: index,
@@ -184,7 +182,6 @@ const FormBuilder = () => {
       return false;
     }
 
-    // Validate field names are unique
     const fieldNames = fields.map(f => f.name);
     const duplicateNames = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
     if (duplicateNames.length > 0) {
@@ -192,7 +189,6 @@ const FormBuilder = () => {
       return false;
     }
 
-    // Validate field names format
     for (const field of fields) {
       if (!field.name || !/^[a-z0-9_]+$/.test(field.name)) {
         toast.error(`Field name "${field.name}" can only contain lowercase letters, numbers, and underscores`);
@@ -200,7 +196,6 @@ const FormBuilder = () => {
       }
     }
 
-    // Validate options for dropdown/checkbox/radio
     for (const field of fields) {
       if (['dropdown', 'checkbox', 'radio'].includes(field.fieldType)) {
         if (!field.options || field.options.length === 0) {
@@ -246,12 +241,10 @@ const FormBuilder = () => {
       if (isEditMode) {
         response = await formAPI.updateForm(formId, formData);
         toast.success('Form updated successfully');
-        // Refresh the form data to ensure everything is up to date
         await fetchFormData();
       } else {
         response = await formAPI.createForm(formData);
         toast.success('Form created successfully');
-        // Navigate to edit mode with the new form ID
         if (response.data?.form?._id) {
           navigate(`/admin/forms/edit/${response.data.form._id}`);
         } else {
@@ -303,7 +296,6 @@ const FormBuilder = () => {
           onChange={(e) => updateField(field._id, { helpText: e.target.value })}
         />
         
-        {/* Options for dropdown, checkbox, radio */}
         {isOptionField && (
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">
@@ -369,7 +361,6 @@ const FormBuilder = () => {
           </div>
         )}
         
-        {/* File settings */}
         {isFileField && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
@@ -419,7 +410,6 @@ const FormBuilder = () => {
           </div>
         )}
         
-        {/* Validation settings */}
         <div className="space-y-3 border-t pt-4">
           <h4 className="text-sm font-medium text-gray-700">Validation Rules</h4>
           
@@ -499,7 +489,6 @@ const FormBuilder = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Button
@@ -542,7 +531,6 @@ const FormBuilder = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left sidebar - Form settings */}
         <div className="lg:col-span-1 space-y-6">
           <div className="card">
             <div className="card-header">
@@ -687,7 +675,6 @@ const FormBuilder = () => {
             </div>
           </div>
 
-          {/* Field types */}
           <div className="card">
             <div className="card-header">
               <h3 className="text-lg font-medium text-gray-900">Add Fields</h3>
@@ -716,7 +703,6 @@ const FormBuilder = () => {
           </div>
         </div>
 
-        {/* Main content - Field editor */}
         <div className="lg:col-span-2">
           <div className="card">
             <div className="card-header">

@@ -4,7 +4,6 @@ export const validateEmail = (email) => {
 };
 
 export const validatePassword = (password) => {
-  // At least 6 characters, one uppercase, one lowercase, one number
   const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
   return re.test(password);
 };
@@ -71,6 +70,16 @@ export const validateField = (value, fieldConfig) => {
             errors.push(`File size must be less than ${maxSizeMB}MB`);
           }
         }
+        break;
+
+      case 'checkbox':
+      case 'radio':
+      case 'dropdown':
+        // These types don't need additional validation beyond required
+        break;
+
+      default:
+        // Default case for any other field types
         break;
     }
   }

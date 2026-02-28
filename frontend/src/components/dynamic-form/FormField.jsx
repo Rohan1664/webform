@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaUpload, FaTrash } from 'react-icons/fa';
 import Input from '../common/Input';
 import Button from '../common/Button';
@@ -12,17 +12,29 @@ const FormField = ({
 }) => {
   const [filePreview, setFilePreview] = useState(null);
 
+  useEffect(() => {
+    return () => {
+      if (filePreview) {
+        URL.revokeObjectURL(filePreview);
+      }
+    };
+  }, [filePreview]);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       onChange(field.name, file);
-      setFilePreview(URL.createObjectURL(file));
+      const preview = URL.createObjectURL(file);
+      setFilePreview(preview);
     }
   };
 
   const removeFile = () => {
     onChange(field.name, null);
-    setFilePreview(null);
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview);
+      setFilePreview(null);
+    }
   };
 
   const renderField = () => {
