@@ -15,7 +15,7 @@ const connectDB = async () => {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      bufferMaxEntries: 0,
+      // REMOVE THIS LINE: bufferMaxEntries: 0, <-- This is deprecated
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
