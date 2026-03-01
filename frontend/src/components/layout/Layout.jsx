@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 
 const Layout = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // If user not logged in
   if (!user) {
@@ -18,6 +18,9 @@ const Layout = ({ children }) => {
     );
   }
 
+  // Check if user is admin
+  const userIsAdmin = isAdmin();
+
   return (
     <div className="h-screen w-screen bg-gray-50 overflow-hidden">
       
@@ -28,13 +31,15 @@ const Layout = ({ children }) => {
 
       <div className="flex pt-16 h-full">
 
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 fixed top-16 left-0 bottom-0 z-40">
-          <Sidebar />
-        </aside>
+        {/* Sidebar - Only render if user is admin */}
+        {userIsAdmin && (
+          <aside className="w-64 bg-white border-r border-gray-200 fixed top-16 left-0 bottom-0 z-40">
+            <Sidebar />
+          </aside>
+        )}
 
-        {/* Main Content */}
-        <main className="ml-64 flex-1 overflow-y-auto p-6">
+        {/* Main Content - Adjust margin based on whether sidebar exists */}
+        <main className={`flex-1 overflow-y-auto p-6 ${userIsAdmin ? 'ml-64' : 'ml-0'}`}>
           {children}
         </main>
 

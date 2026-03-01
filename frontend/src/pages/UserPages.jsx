@@ -13,7 +13,7 @@ const UserPages = () => {
       <Route path=":formId" element={<FormRenderer />} />
 
       {/* /forms/my-submissions */}
-      <Route path="my-submissions" element={<div>My Submissions Page</div>} />
+      {/* <Route path="my-submissions" element={<div>My Submissions Page</div>} /> */}
     </Routes>
   );
 };
