@@ -4,13 +4,14 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/User.model');
 const connectDB = require('./db');
 
-// Debug: Check if env vars are loaded (now they should be!)
-console.log('🔍 Passport Config - Environment Check:');
+// Debug: Check if env vars are loaded
+console.log('\n🔍 Passport Config - Environment Check:');
 console.log('  GOOGLE_CLIENT_ID present:', !!process.env.GOOGLE_CLIENT_ID);
 console.log('  GOOGLE_CLIENT_SECRET present:', !!process.env.GOOGLE_CLIENT_SECRET);
 console.log('  GITHUB_CLIENT_ID present:', !!process.env.GITHUB_CLIENT_ID);
 console.log('  GITHUB_CLIENT_SECRET present:', !!process.env.GITHUB_CLIENT_SECRET);
 console.log('  BACKEND_URL:', process.env.BACKEND_URL || 'http://localhost:5000');
+console.log('  NODE_ENV:', process.env.NODE_ENV || 'development');
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
@@ -30,15 +31,22 @@ passport.deserializeUser(async (id, done) => {
 
 // Google OAuth Strategy
 try {
-  console.log('📝 Attempting to register Google Strategy...');
+  console.log('\n📝 Attempting to register Google Strategy...');
   
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('⚠️ Google OAuth credentials missing. Google login will not work.');
   } else {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const callbackURL = `${backendUrl}/api/auth/google/callback`;
+    
+    console.log('  ✅ GOOGLE_CLIENT_ID found');
+    console.log('  ✅ GOOGLE_CLIENT_SECRET found');
+    console.log('  📍 Callback URL configured as:', callbackURL);
+    
     passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`,
+      callbackURL: callbackURL,
       proxy: true
     }, async (accessToken, refreshToken, profile, done) => {
       try {
@@ -48,7 +56,7 @@ try {
         const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
         
         if (!email) {
-          console.error('No email provided from Google profile:', profile);
+          console.error('❌ No email provided from Google profile:', profile);
           return done(new Error('No email provided from Google'), null);
         }
         
@@ -89,15 +97,22 @@ try {
 
 // GitHub OAuth Strategy
 try {
-  console.log('📝 Attempting to register GitHub Strategy...');
+  console.log('\n📝 Attempting to register GitHub Strategy...');
   
   if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
     console.warn('⚠️ GitHub OAuth credentials missing. GitHub login will not work.');
   } else {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const callbackURL = `${backendUrl}/api/auth/github/callback`;
+    
+    console.log('  ✅ GITHUB_CLIENT_ID found');
+    console.log('  ✅ GITHUB_CLIENT_SECRET found');
+    console.log('  📍 Callback URL configured as:', callbackURL);
+    
     passport.use(new GitHubStrategy({
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`,
+      callbackURL: callbackURL,
       proxy: true
     }, async (accessToken, refreshToken, profile, done) => {
       try {
@@ -146,6 +161,7 @@ try {
 }
 
 // Debug: List all registered strategies
-console.log('📊 Registered Passport Strategies:', Object.keys(passport._strategies));
+console.log('\n📊 Registered Passport Strategies:', Object.keys(passport._strategies));
+console.log('');
 
 module.exports = passport;

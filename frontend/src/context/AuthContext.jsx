@@ -77,11 +77,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register function
+  // Register function - Updated to remove role if present
   const register = async (userData) => {
     try {
       setLoading(true);
-      const response = await authAPI.register(userData);
+      
+      // Remove role if it exists (though we removed it from the form)
+      // This ensures no role is sent to backend
+      const { role, ...cleanUserData } = userData;
+      
+      console.log('Registering with data:', cleanUserData); // For debugging
+      
+      const response = await authAPI.register(cleanUserData);
       const { user, token, refreshToken } = response.data;
       
       // Store tokens and user data
@@ -94,6 +101,7 @@ export const AuthProvider = ({ children }) => {
       toast.success(`Welcome, ${user.firstName}!`);
       return { success: true, user };
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error(error.response?.data?.message || 'Registration failed');
       return { success: false, error };
     } finally {

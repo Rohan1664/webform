@@ -49,9 +49,19 @@ router.post('/logout', authenticate, authController.logout);
  * @desc    Initiate Google OAuth
  * @access  Public
  */
-router.get('/google', passport.authenticate('google', { 
-  scope: ['profile', 'email'] 
-}));
+router.get('/google', (req, res, next) => {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const callbackURL = `${backendUrl}/api/auth/google/callback`;
+  
+  console.log('🔐 Google OAuth Initiated');
+  console.log('  BACKEND_URL:', backendUrl);
+  console.log('  Callback URL being used:', callbackURL);
+  console.log('  This MUST match exactly in Google Cloud Console');
+  
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'] 
+  })(req, res, next);
+});
 
 /**
  * @route   GET /api/auth/google/callback
@@ -89,11 +99,13 @@ router.get('/google/callback',
       
       // Redirect to frontend with tokens
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      console.log('✅ Google OAuth successful, redirecting to:', frontendUrl);
+      
       res.redirect(
         `${frontendUrl}/oauth-callback?token=${token}&refreshToken=${refreshToken}&user=${encodeURIComponent(JSON.stringify(userData))}`
       );
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
+      console.error('❌ Google OAuth callback error:', error);
       res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth-failed`);
     }
   }
@@ -106,9 +118,18 @@ router.get('/google/callback',
  * @desc    Initiate GitHub OAuth
  * @access  Public
  */
-router.get('/github', passport.authenticate('github', { 
-  scope: ['user:email'] 
-}));
+router.get('/github', (req, res, next) => {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const callbackURL = `${backendUrl}/api/auth/github/callback`;
+  
+  console.log('🔐 GitHub OAuth Initiated');
+  console.log('  BACKEND_URL:', backendUrl);
+  console.log('  Callback URL being used:', callbackURL);
+  
+  passport.authenticate('github', { 
+    scope: ['user:email'] 
+  })(req, res, next);
+});
 
 /**
  * @route   GET /api/auth/github/callback
@@ -146,14 +167,33 @@ router.get('/github/callback',
       
       // Redirect to frontend with tokens
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      console.log('✅ GitHub OAuth successful, redirecting to:', frontendUrl);
+      
       res.redirect(
         `${frontendUrl}/oauth-callback?token=${token}&refreshToken=${refreshToken}&user=${encodeURIComponent(JSON.stringify(userData))}`
       );
     } catch (error) {
-      console.error('GitHub OAuth callback error:', error);
+      console.error('❌ GitHub OAuth callback error:', error);
       res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth-failed`);
     }
   }
 );
+
+// Debug endpoint to check configuration
+router.get('/debug', (req, res) => {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const googleCallback = `${backendUrl}/api/auth/google/callback`;
+  const githubCallback = `${backendUrl}/api/auth/github/callback`;
+  
+  res.json({
+    environment: process.env.NODE_ENV,
+    backendUrl,
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    googleCallback,
+    githubCallback,
+    googleClientId: process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Not set',
+    githubClientId: process.env.GITHUB_CLIENT_ID ? '✅ Set' : '❌ Not set'
+  });
+});
 
 module.exports = router;

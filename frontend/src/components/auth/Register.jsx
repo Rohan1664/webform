@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaUser, FaEnvelope, FaLock, FaUserCircle } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
@@ -14,7 +14,6 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -95,7 +94,7 @@ const Register = () => {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        role: formData.role,
+        // role is not sent - backend will default to 'user'
       };
       
       const result = await register(userData);
@@ -120,10 +119,7 @@ const Register = () => {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-              sign in to existing account
-            </Link>
+            Join us to start filling out forms
           </p>
         </div>
         
@@ -198,59 +194,6 @@ const Register = () => {
                 autoComplete="new-password"
               />
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Account type
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="user"
-                      checked={formData.role === 'user'}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    <span className="flex flex-1">
-                      <span className="flex flex-col">
-                        <span className="block text-sm font-medium text-gray-900">
-                          User
-                        </span>
-                        <span className="mt-1 flex items-center text-sm text-gray-500">
-                          Submit and view forms
-                        </span>
-                      </span>
-                    </span>
-                    <FaUserCircle className="h-5 w-5 text-primary-600" />
-                    <span className={`pointer-events-none absolute -inset-px rounded-lg border-2 ${formData.role === 'user' ? 'border-primary-500' : 'border-transparent'}`} />
-                  </label>
-                  
-                  <label className="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="admin"
-                      checked={formData.role === 'admin'}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    <span className="flex flex-1">
-                      <span className="flex flex-col">
-                        <span className="block text-sm font-medium text-gray-900">
-                          Admin
-                        </span>
-                        <span className="mt-1 flex items-center text-sm text-gray-500">
-                          Create forms and manage users
-                        </span>
-                      </span>
-                    </span>
-                    <FaUserCircle className="h-5 w-5 text-primary-600" />
-                    <span className={`pointer-events-none absolute -inset-px rounded-lg border-2 ${formData.role === 'admin' ? 'border-primary-500' : 'border-transparent'}`} />
-                  </label>
-                </div>
-              </div>
-              
               <div className="flex items-center">
                 <input
                   id="terms"
@@ -289,6 +232,43 @@ const Register = () => {
                 </div>
               )}
             </form>
+
+            {/* OAuth Section */}
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+                    window.location.href = `${backendUrl}/api/auth/google`;
+                  }}
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+                    window.location.href = `${backendUrl}/api/auth/github`;
+                  }}
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  GitHub
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
