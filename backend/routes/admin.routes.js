@@ -26,6 +26,20 @@ router.get('/users', adminController.getAllUsers);
 router.patch('/users/:userId/status', adminController.updateUserStatus);
 
 /**
+ * @route   PUT /api/admin/users/:userId
+ * @desc    Update user details (EDIT)
+ * @access  Private/Admin
+ */
+router.put('/users/:userId', adminController.updateUser);
+
+/**
+ * @route   DELETE /api/admin/users/:userId
+ * @desc    Delete user
+ * @access  Private/Admin
+ */
+router.delete('/users/:userId', adminController.deleteUser);
+
+/**
  * @route   GET /api/admin/users/export/excel
  * @desc    Export users to Excel with current filters
  * @access  Private/Admin

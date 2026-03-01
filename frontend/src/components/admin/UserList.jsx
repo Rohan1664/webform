@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaSearch, 
-  // FaFilter, 
   FaEdit, 
   FaTrash, 
   FaUserCheck, 
   FaUserTimes,
   FaFileExcel,
-  FaFileCsv
+  FaFileCsv,
+  FaSave,
+  FaTimes
 } from 'react-icons/fa';
 import { adminAPI } from '../../api/admin.api';
 import Input from '../common/Input';
@@ -28,6 +29,15 @@ const UserList = () => {
     limit: 10,
     totalUsers: 0,
     totalPages: 1,
+  });
+  
+  // State for editing user
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: ''
   });
 
   const fetchUsers = useCallback(async () => {
@@ -57,6 +67,82 @@ const UserList = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Handle Edit button click
+  const handleEditClick = (user) => {
+    setEditingUser(user._id);
+    setEditFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      role: user.role || 'user'
+    });
+  };
+
+  // Handle Edit form input change
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle Cancel Edit
+  const handleCancelEdit = () => {
+    setEditingUser(null);
+    setEditFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      role: ''
+    });
+  };
+
+  // Handle Save Edit
+  const handleSaveEdit = async (userId) => {
+    const toastId = toast.loading('Updating user...');
+    
+    try {
+      // You'll need to add this method to your adminAPI
+      const response = await adminAPI.updateUser(userId, editFormData);
+      
+      if (response.success) {
+        toast.success('User updated successfully', { id: toastId });
+        setEditingUser(null);
+        fetchUsers(); // Refresh the list
+      } else {
+        throw new Error(response.message || 'Failed to update user');
+      }
+    } catch (err) {
+      console.error('Update error:', err);
+      toast.error(err.response?.data?.message || 'Failed to update user', { id: toastId });
+    }
+  };
+
+  // Handle Delete User
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    const toastId = toast.loading('Deleting user...');
+    
+    try {
+      // You'll need to add this method to your adminAPI
+      const response = await adminAPI.deleteUser(userId);
+      
+      if (response.success) {
+        toast.success('User deleted successfully', { id: toastId });
+        fetchUsers(); // Refresh the list
+      } else {
+        throw new Error(response.message || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete user', { id: toastId });
+    }
+  };
+
   const handleExport = async (format = 'excel') => {
     const toastId = toast.loading(`Preparing ${format.toUpperCase()} export...`);
     
@@ -78,12 +164,10 @@ const UserList = () => {
         throw new Error('No data received from server');
       }
       
-      // Create filename with timestamp
       const date = new Date();
       const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}_${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}`;
       const filename = `users_export_${timestamp}.${format === 'excel' ? 'xlsx' : 'csv'}`;
       
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -92,7 +176,6 @@ const UserList = () => {
       link.click();
       link.remove();
       
-      // Clean up
       window.URL.revokeObjectURL(url);
       
       toast.success(`${format.toUpperCase()} export completed successfully!`, { id: toastId });
@@ -126,12 +209,14 @@ const UserList = () => {
       return;
     }
 
+    const toastId = toast.loading(`${currentStatus ? 'Deactivating' : 'Activating'} user...`);
+    
     try {
       await adminAPI.updateUserStatus(userId, !currentStatus);
-      toast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
+      toast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`, { id: toastId });
       fetchUsers();
     } catch (err) {
-      toast.error('Failed to update user status');
+      toast.error('Failed to update user status', { id: toastId });
     }
   };
 
@@ -262,30 +347,72 @@ const UserList = () => {
                 users.map((user) => (
                   <tr key={user._id} className="table-row hover:bg-gray-50">
                     <td className="table-cell">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                          <span className="text-primary-600 font-medium">
-                            {user.firstName?.[0]}{user.lastName?.[0]}
-                          </span>
+                      {editingUser === user._id ? (
+                        <div className="space-y-2">
+                          <Input
+                            name="firstName"
+                            value={editFormData.firstName}
+                            onChange={handleEditChange}
+                            placeholder="First name"
+                            size="sm"
+                          />
+                          <Input
+                            name="lastName"
+                            value={editFormData.lastName}
+                            onChange={handleEditChange}
+                            placeholder="Last name"
+                            size="sm"
+                          />
                         </div>
-                        <div className="ml-4">
-                          <div className="font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
+                      ) : (
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span className="text-primary-600 font-medium">
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </td>
                     <td className="table-cell">
-                      <div className="text-sm text-gray-900">{user.email}</div>
+                      {editingUser === user._id ? (
+                        <Input
+                          name="email"
+                          type="email"
+                          value={editFormData.email}
+                          onChange={handleEditChange}
+                          placeholder="Email"
+                          size="sm"
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900">{user.email}</div>
+                      )}
                     </td>
                     <td className="table-cell">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {user.role}
-                      </span>
+                      {editingUser === user._id ? (
+                        <select
+                          name="role"
+                          value={editFormData.role}
+                          onChange={handleEditChange}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          user.role === 'admin' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user.role}
+                        </span>
+                      )}
                     </td>
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -304,29 +431,52 @@ const UserList = () => {
                     </td>
                     <td className="table-cell">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleStatusToggle(user._id, user.isActive)}
-                          className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
-                          title={user.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {user.isActive ? (
-                            <FaUserTimes className="h-4 w-4 text-red-600" />
-                          ) : (
-                            <FaUserCheck className="h-4 w-4 text-green-600" />
-                          )}
-                        </button>
-                        <button
-                          className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
-                          title="Edit User"
-                        >
-                          <FaEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50"
-                          title="Delete User"
-                        >
-                          <FaTrash className="h-4 w-4" />
-                        </button>
+                        {editingUser === user._id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEdit(user._id)}
+                              className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50"
+                              title="Save"
+                            >
+                              <FaSave className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50"
+                              title="Cancel"
+                            >
+                              <FaTimes className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleStatusToggle(user._id, user.isActive)}
+                              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+                              title={user.isActive ? 'Deactivate' : 'Activate'}
+                            >
+                              {user.isActive ? (
+                                <FaUserTimes className="h-4 w-4 text-red-600" />
+                              ) : (
+                                <FaUserCheck className="h-4 w-4 text-green-600" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(user)}
+                              className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
+                              title="Edit User"
+                            >
+                              <FaEdit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                              className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50"
+                              title="Delete User"
+                            >
+                              <FaTrash className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -7,9 +7,21 @@ export const adminAPI = {
     return response.data;
   },
 
-  // Update user status
+  // Update user status (activate/deactivate)
   updateUserStatus: async (userId, isActive) => {
     const response = await axiosInstance.patch(`/admin/users/${userId}/status`, { isActive });
+    return response.data;
+  },
+
+  // Update user details (EDIT)
+  updateUser: async (userId, userData) => {
+    const response = await axiosInstance.put(`/admin/users/${userId}`, userData);
+    return response.data;
+  },
+
+  // Delete user
+  deleteUser: async (userId) => {
+    const response = await axiosInstance.delete(`/admin/users/${userId}`);
     return response.data;
   },
 
@@ -24,7 +36,7 @@ export const adminAPI = {
     const response = await axiosInstance.get(`/admin/forms/${formId}/submissions/download/excel`, {
       responseType: 'blob',
     });
-    return response; // Return full response, not just data
+    return response;
   },
 
   // Download submissions as CSV
@@ -32,7 +44,7 @@ export const adminAPI = {
     const response = await axiosInstance.get(`/admin/forms/${formId}/submissions/download/csv`, {
       responseType: 'blob',
     });
-    return response; // Return full response, not just data
+    return response;
   },
 
   // Export users to Excel
@@ -41,7 +53,7 @@ export const adminAPI = {
       params,
       responseType: 'blob',
     });
-    return response; // Return full response, not just data
+    return response;
   },
 
   // Export users to CSV
@@ -50,6 +62,6 @@ export const adminAPI = {
       params,
       responseType: 'blob',
     });
-    return response; // Return full response, not just data
+    return response;
   }
 };
