@@ -4,14 +4,19 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/User.model');
 const connectDB = require('./db');
 
+// Hardcoded production URLs
+const PROD_GOOGLE_CALLBACK = 'https://webform-nine.vercel.app/api/auth/google/callback';
+const PROD_GITHUB_CALLBACK = 'https://webform-nine.vercel.app/api/auth/github/callback';
+
 // Debug: Check if env vars are loaded
 console.log('\n🔍 Passport Config - Environment Check:');
 console.log('  GOOGLE_CLIENT_ID present:', !!process.env.GOOGLE_CLIENT_ID);
 console.log('  GOOGLE_CLIENT_SECRET present:', !!process.env.GOOGLE_CLIENT_SECRET);
 console.log('  GITHUB_CLIENT_ID present:', !!process.env.GITHUB_CLIENT_ID);
 console.log('  GITHUB_CLIENT_SECRET present:', !!process.env.GITHUB_CLIENT_SECRET);
-console.log('  BACKEND_URL:', process.env.BACKEND_URL || 'http://localhost:5000');
 console.log('  NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('  Production Google Callback:', PROD_GOOGLE_CALLBACK);
+console.log('  Production GitHub Callback:', PROD_GITHUB_CALLBACK);
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
@@ -36,8 +41,8 @@ try {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.warn('⚠️ Google OAuth credentials missing. Google login will not work.');
   } else {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const callbackURL = `${backendUrl}/api/auth/google/callback`;
+    // Use hardcoded production URL
+    const callbackURL = PROD_GOOGLE_CALLBACK;
     
     console.log('  ✅ GOOGLE_CLIENT_ID found');
     console.log('  ✅ GOOGLE_CLIENT_SECRET found');
@@ -102,8 +107,8 @@ try {
   if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
     console.warn('⚠️ GitHub OAuth credentials missing. GitHub login will not work.');
   } else {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const callbackURL = `${backendUrl}/api/auth/github/callback`;
+    // Use hardcoded production URL
+    const callbackURL = PROD_GITHUB_CALLBACK;
     
     console.log('  ✅ GITHUB_CLIENT_ID found');
     console.log('  ✅ GITHUB_CLIENT_SECRET found');

@@ -44,22 +44,28 @@ router.post('/logout', authenticate, authController.logout);
 
 // ==================== GOOGLE OAUTH ROUTES ====================
 
+// Hardcoded production URL to avoid any mismatch
+const PROD_GOOGLE_CALLBACK = 'https://webform-nine.vercel.app/api/auth/google/callback';
+const PROD_GITHUB_CALLBACK = 'https://webform-nine.vercel.app/api/auth/github/callback';
+
 /**
  * @route   GET /api/auth/google
  * @desc    Initiate Google OAuth
  * @access  Public
  */
 router.get('/google', (req, res, next) => {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-  const callbackURL = `${backendUrl}/api/auth/google/callback`;
+  // Use hardcoded production URL
+  const callbackURL = PROD_GOOGLE_CALLBACK;
   
-  console.log('🔐 Google OAuth Initiated');
-  console.log('  BACKEND_URL:', backendUrl);
+  console.log('\n🔐 Google OAuth Initiated');
+  console.log('  Environment:', process.env.NODE_ENV);
   console.log('  Callback URL being used:', callbackURL);
   console.log('  This MUST match exactly in Google Cloud Console');
+  console.log('  Expected in Google Console:', callbackURL);
   
   passport.authenticate('google', { 
-    scope: ['profile', 'email'] 
+    scope: ['profile', 'email'],
+    callbackURL: callbackURL // Explicitly set callback URL
   })(req, res, next);
 });
 
@@ -119,15 +125,16 @@ router.get('/google/callback',
  * @access  Public
  */
 router.get('/github', (req, res, next) => {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-  const callbackURL = `${backendUrl}/api/auth/github/callback`;
+  // Use hardcoded production URL
+  const callbackURL = PROD_GITHUB_CALLBACK;
   
-  console.log('🔐 GitHub OAuth Initiated');
-  console.log('  BACKEND_URL:', backendUrl);
+  console.log('\n🔐 GitHub OAuth Initiated');
+  console.log('  Environment:', process.env.NODE_ENV);
   console.log('  Callback URL being used:', callbackURL);
   
   passport.authenticate('github', { 
-    scope: ['user:email'] 
+    scope: ['user:email'],
+    callbackURL: callbackURL // Explicitly set callback URL
   })(req, res, next);
 });
 
@@ -181,18 +188,15 @@ router.get('/github/callback',
 
 // Debug endpoint to check configuration
 router.get('/debug', (req, res) => {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-  const googleCallback = `${backendUrl}/api/auth/google/callback`;
-  const githubCallback = `${backendUrl}/api/auth/github/callback`;
-  
   res.json({
     environment: process.env.NODE_ENV,
-    backendUrl,
+    backendUrl: process.env.BACKEND_URL || 'http://localhost:5000',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-    googleCallback,
-    githubCallback,
+    googleCallback: PROD_GOOGLE_CALLBACK,
+    githubCallback: PROD_GITHUB_CALLBACK,
     googleClientId: process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Not set',
-    githubClientId: process.env.GITHUB_CLIENT_ID ? '✅ Set' : '❌ Not set'
+    githubClientId: process.env.GITHUB_CLIENT_ID ? '✅ Set' : '❌ Not set',
+    nodeEnv: process.env.NODE_ENV
   });
 });
 
