@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Define logout with useCallback to prevent unnecessary re-renders
+  // Define logout with useCallback
   const logout = useCallback(async () => {
     try {
       if (token) {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, [logout]); // Add logout to dependency array
+  }, [logout]);
 
   // Login function
   const login = async (email, password) => {
@@ -101,6 +101,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // OAuth Login function
+  const oauthLogin = (userData, token, refreshToken) => {
+    setUser(userData);
+    setToken(token);
+    // Already stored in localStorage in the callback component
+  };
+
   // Update user data
   const updateUser = (userData) => {
     setUser(userData);
@@ -124,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    oauthLogin,
     updateUser,
     isAdmin,
     isAuthenticated,

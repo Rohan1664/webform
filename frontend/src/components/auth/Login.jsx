@@ -28,7 +28,6 @@ const Login = () => {
       [name]: value,
     }));
     
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -74,6 +73,17 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // OAuth handlers
+  const handleGoogleLogin = () => {
+    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    window.location.href = `${backendUrl}/api/auth/google`;
+  };
+
+  const handleGitHubLogin = () => {
+    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    window.location.href = `${backendUrl}/api/auth/github`;
   };
 
   return (
@@ -167,12 +177,14 @@ const Login = () => {
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <button
                   type="button"
+                  onClick={handleGoogleLogin}
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
                   Google
                 </button>
                 <button
                   type="button"
+                  onClick={handleGitHubLogin}
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
                   GitHub

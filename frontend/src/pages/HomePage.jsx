@@ -51,7 +51,7 @@ const HomePage = () => {
                     {isAuthenticated() ? (
                       <Link to={user?.role === 'admin' ? '/admin/dashboard' : '/forms'}>
                         <Button variant="primary" size="lg">
-                          Go to Dashboard
+                          Go to Events
                         </Button>
                       </Link>
                     ) : (
@@ -62,13 +62,13 @@ const HomePage = () => {
                       </Link>
                     )}
                   </div>
-                  <div className="mt-3 sm:mt-0 sm:ml-3">
+                  {/* <div className="mt-3 sm:mt-0 sm:ml-3">
                     <Link to="/login">
                       <Button variant="outline" size="lg">
                         Sign In
                       </Button>
                     </Link>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </main>
@@ -130,13 +130,13 @@ const HomePage = () => {
                 </Button>
               </Link>
             </div>
-            <div className="ml-3 inline-flex rounded-md shadow">
+            {/* <div className="ml-3 inline-flex rounded-md shadow">
               <Link to="/login">
                 <Button variant="outline" size="lg" className="text-white border-white hover:bg-primary-600">
                   Sign in
                 </Button>
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

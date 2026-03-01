@@ -4,9 +4,23 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
 
-// Load environment variables
+// Load environment variables - THIS MUST COME FIRST
 dotenv.config();
+
+// Debug: Log environment variables (without secrets)
+console.log('🔍 Server Environment Check:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  PORT:', process.env.PORT);
+console.log('  MONGODB_URI:', process.env.MONGODB_URI ? '✅ Set' : '❌ Not set');
+console.log('  GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Not set');
+console.log('  GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID ? '✅ Set' : '❌ Not set');
+console.log('  BACKEND_URL:', process.env.BACKEND_URL || 'http://localhost:5000');
+console.log('  FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost:3000');
+
+// NOW import passport AFTER env vars are loaded
+const passport = require('./config/passport');
 
 // Import database connection
 const connectDB = require('./config/db');
@@ -26,8 +40,8 @@ const app = express();
 // Rate limiting (disable for serverless or configure appropriately)
 if (process.env.NODE_ENV !== 'production') {
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again later.'
   });
   app.use(limiter);
@@ -45,6 +59,21 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Request logging
 if (process.env.NODE_ENV !== 'production') {
@@ -68,6 +97,12 @@ app.use(async (req, res, next) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
+});
+
+// Debug middleware to log all requests to auth routes
+app.use('/api/auth', (req, res, next) => {
+  console.log(`🔐 Auth Route Accessed: ${req.method} ${req.url}`);
+  next();
 });
 
 // API Routes
@@ -113,21 +148,21 @@ app.use(errorHandler);
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`📝 Registered Passport Strategies:`, Object.keys(passport._strategies));
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || `http://localhost:${PORT}`}\n`);
   });
 
-  // Handle unhandled promise rejections
   process.on('unhandledRejection', (err) => {
     console.error('Unhandled Rejection:', err);
     server.close(() => process.exit(1));
   });
 
-  // Handle uncaught exceptions
   process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     server.close(() => process.exit(1));
   });
 }
 
-// Export for Vercel
 module.exports = app;
