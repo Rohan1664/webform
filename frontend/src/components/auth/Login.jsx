@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaExclamationCircle } from 'react-icons/fa';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
@@ -13,6 +13,8 @@ const Login = () => {
     password: '',
   });
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [apiErrorType, setApiErrorType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
@@ -28,11 +30,18 @@ const Login = () => {
       [name]: value,
     }));
     
+    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: '',
       }));
+    }
+    
+    // Clear API error when user starts typing
+    if (apiError) {
+      setApiError('');
+      setApiErrorType('');
     }
   };
 
@@ -55,6 +64,10 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    setApiError('');
+    setApiErrorType('');
+    setErrors({}); // Clear all previous errors
+    
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -65,11 +78,20 @@ const Login = () => {
     
     try {
       const result = await login(formData.email, formData.password);
+      
       if (result.success) {
         navigate(from, { replace: true });
+      } else {
+        // Set API error based on error type from AuthContext
+        setApiErrorType(result.errorType || 'generic');
+        setApiError(result.error || 'Login failed');
+        
+        // Don't set field errors for API errors - let the box handle it
+        // This prevents duplicate error messages
       }
     } catch (error) {
       console.error('Login error:', error);
+      setApiError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -106,19 +128,66 @@ const Login = () => {
         
         <div className="card">
           <div className="card-body">
+            {/* Email not found error - shows as a blue info box */}
+            {apiError && apiErrorType === 'email_not_found' && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex">
+                  <FaExclamationCircle className="text-blue-500 mt-0.5 mr-3 flex-shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Account not found</p>
+                    <p className="text-sm text-blue-700 mt-1">{apiError}</p>
+                    <Link 
+                      to="/register" 
+                      className="text-sm font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
+                    >
+                      Create a new account →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Invalid password error - shows as a yellow warning box */}
+            {apiError && apiErrorType === 'invalid_password' && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="flex">
+                  <FaExclamationCircle className="text-yellow-500 mt-0.5 mr-3 flex-shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Incorrect password</p>
+                    <p className="text-sm text-yellow-700 mt-1">{apiError}</p>
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-sm font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
+                    >
+                      Forgot your password? →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Generic error - shows as a red error box */}
+            {apiError && apiErrorType === 'generic' && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{apiError}</p>
+              </div>
+            )}
+            
             <form className="space-y-6" onSubmit={handleSubmit}>
-              <Input
-                label="Email address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-                icon={FaEnvelope}
-                placeholder="you@example.com"
-                required
-                autoComplete="email"
-              />
+              <div>
+                <Input
+                  label="Email address"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email} // Only shows validation errors, not API errors
+                  icon={FaEnvelope}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
               
               <div>
                 <Input
@@ -127,7 +196,7 @@ const Login = () => {
                   type="password"
                   value={formData.password}
                   onChange={handleChange}
-                  error={errors.password}
+                  error={errors.password} // Only shows validation errors, not API errors
                   icon={FaLock}
                   placeholder="••••••••"
                   required

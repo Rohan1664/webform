@@ -24,7 +24,7 @@ const generateRefreshToken = (userId, role) => {
 // Register User
 exports.register = async (req, res) => {
   try {
-    await connectDB(); // Ensure database is connected
+    await connectDB();
     
     // Check for validation errors
     const errors = validationResult(req);
@@ -35,24 +35,25 @@ exports.register = async (req, res) => {
       });
     }
 
-    const { email, password, firstName, lastName, role } = req.body;
+    const { email, password, firstName, lastName } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email'
+        message: 'Email already registered. Please use a different email or login.',
+        errorType: 'email_already_exists'
       });
     }
 
-    // Create new user
+    // Create new user (always set role to 'user' for public registration)
     const user = new User({
       email,
       password,
       firstName,
       lastName,
-      role: role || 'user'
+      role: 'user' // Always set to user for public registration
     });
 
     await user.save();
@@ -91,10 +92,10 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login User
+// Login User - FIXED: Differentiate between email not found and wrong password
 exports.login = async (req, res) => {
   try {
-    await connectDB(); // Ensure database is connected
+    await connectDB();
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -106,12 +107,15 @@ exports.login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Find user by email
+    // FIRST: Check if user exists by email
     const user = await User.findOne({ email });
+    
+    // If user doesn't exist, return specific email error
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Email not found. Please check your email or create a new account.',
+        errorType: 'email_not_found'
       });
     }
 
@@ -119,16 +123,18 @@ exports.login = async (req, res) => {
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
-        message: 'Account is deactivated'
+        message: 'Account is deactivated. Please contact support.',
+        errorType: 'account_deactivated'
       });
     }
 
-    // Check password
+    // THEN: Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Incorrect password. Please try again.',
+        errorType: 'invalid_password'
       });
     }
 
