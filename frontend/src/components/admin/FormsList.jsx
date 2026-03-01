@@ -71,12 +71,16 @@ const FormsList = () => {
     }
   };
 
+  // FIXED: Using the dedicated toggle endpoint
   const handleToggleStatus = async (formId, currentStatus) => {
     try {
-      await formAPI.updateForm(formId, { isActive: !currentStatus });
+      // Using the dedicated toggle endpoint
+      await formAPI.toggleFormStatus(formId);
+      
       toast.success(`Form ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchForms();
     } catch (err) {
+      console.error('Toggle error:', err);
       toast.error(err.response?.data?.message || 'Failed to update form status');
     }
   };

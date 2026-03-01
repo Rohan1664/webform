@@ -49,6 +49,17 @@ router.put('/:formId',
 );
 
 /**
+ * @route   PATCH /api/forms/:formId/toggle-status
+ * @desc    Toggle form active status
+ * @access  Private/Admin
+ */
+router.patch('/:formId/toggle-status', 
+  authenticate, 
+  roleCheck('admin'), 
+  formController.toggleFormStatus
+);
+
+/**
  * @route   DELETE /api/forms/:formId
  * @desc    Soft delete a form (set isActive to false)
  * @access  Private/Admin

@@ -19,15 +19,9 @@ export const formAPI = {
       console.error('❌ FormAPI.getForms error:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          params: error.config?.params
-        }
+        status: error.response?.status
       });
       
-      // Throw a more descriptive error
       throw new Error(
         error.response?.data?.message || 
         error.message || 
@@ -116,6 +110,34 @@ export const formAPI = {
         error.response?.data?.message || 
         error.message || 
         'Failed to update form'
+      );
+    }
+  },
+
+  // Toggle form status (admin only) - NEW METHOD
+  toggleFormStatus: async (formId) => {
+    try {
+      console.log(`🔍 FormAPI.toggleFormStatus called for ID: ${formId}`);
+      
+      const response = await axiosInstance.patch(`/forms/${formId}/toggle-status`);
+      
+      console.log('✅ FormAPI.toggleFormStatus response:', {
+        status: response.status,
+        data: response.data
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`❌ FormAPI.toggleFormStatus error for ID ${formId}:`, {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to toggle form status'
       );
     }
   },

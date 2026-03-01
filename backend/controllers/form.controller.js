@@ -24,7 +24,7 @@ exports.createForm = async (req, res) => {
       description: description?.trim(),
       createdBy: req.user.userId,
       settings: settings || {},
-      isActive: true // Explicitly set to true
+      isActive: true
     });
     
     await form.save();
@@ -40,7 +40,7 @@ exports.createForm = async (req, res) => {
         options: field.options || [],
         validation: field.validation || {},
         order: field.order || index,
-        isActive: true // Explicitly set to true
+        isActive: true
       }));
       
       await FormField.insertMany(formFields);
@@ -71,27 +71,30 @@ exports.createForm = async (req, res) => {
   }
 };
 
-// Get all forms - FIXED VERSION
+// Get all forms
 exports.getAllForms = async (req, res) => {
   try {
     await connectDB();
     
     const { page = 1, limit = 10, search = '', activeOnly = 'true' } = req.query;
     
-    // Base query - only active forms
-    const query = { isActive: activeOnly === 'true' };
+    // Base query
+    const query = {};
+    
+    // Filter by active status if specified
+    if (activeOnly === 'true') {
+      query.isActive = true;
+    } else if (activeOnly === 'false') {
+      query.isActive = false;
+    }
     
     // Build search query
     if (search) {
       query.title = { $regex: search, $options: 'i' };
     }
     
-    // FIX: For regular users, show all active forms
-    // Don't filter by requireLogin here - let the frontend handle that
-    // This ensures users see all active forms regardless of login requirement
-    
-    console.log('Fetching forms with query:', query); // Debug log
-    console.log('User role:', req.user ? req.user.role : 'No user'); // Debug log
+    console.log('Fetching forms with query:', query);
+    console.log('User role:', req.user ? req.user.role : 'No user');
     
     const pageInt = parseInt(page);
     const limitInt = parseInt(limit);
@@ -108,7 +111,7 @@ exports.getAllForms = async (req, res) => {
     const totalForms = await Form.countDocuments(query);
     const totalPages = Math.ceil(totalForms / limitInt);
     
-    console.log(`Found ${forms.length} forms`); // Debug log
+    console.log(`Found ${forms.length} forms`);
     
     res.json({
       success: true,
@@ -177,13 +180,15 @@ exports.getFormById = async (req, res) => {
   }
 };
 
-// Update form (admin only)
+// Update form (admin only) - FIXED to handle isActive
 exports.updateForm = async (req, res) => {
   try {
     await connectDB();
     
     const { formId } = req.params;
-    const { title, description, settings, fields } = req.body;
+    const { title, description, settings, fields, isActive } = req.body;
+    
+    console.log('Updating form:', { formId, isActive, title }); // Debug log
     
     // Check if form exists and belongs to admin
     const form = await Form.findOne({ 
@@ -198,15 +203,16 @@ exports.updateForm = async (req, res) => {
       });
     }
     
-    // Update form
-    if (title) form.title = title.trim();
-    if (description !== undefined) form.description = description.trim();
+    // Update form fields if provided
+    if (title !== undefined) form.title = title.trim();
+    if (description !== undefined) form.description = description?.trim();
     if (settings) form.settings = { ...form.settings, ...settings };
+    if (isActive !== undefined) form.isActive = isActive; // ✅ Handle isActive toggle
     
     await form.save();
     
-    // Update fields if provided
-    if (fields && Array.isArray(fields)) {
+    // Update fields if provided (for full form edit)
+    if (fields && Array.isArray(fields) && fields.length > 0) {
       // First, deactivate all existing fields
       await FormField.updateMany(
         { formId: form._id },
@@ -230,7 +236,7 @@ exports.updateForm = async (req, res) => {
               options: field.options || [],
               validation: field.validation || {},
               order: field.order || index,
-              isActive: true // Set to true when updating
+              isActive: true
             },
             { new: true, upsert: false }
           );
@@ -245,7 +251,7 @@ exports.updateForm = async (req, res) => {
             options: field.options || [],
             validation: field.validation || {},
             order: field.order || index,
-            isActive: true // Explicitly set to true
+            isActive: true
           });
           return newField.save();
         }
@@ -275,6 +281,53 @@ exports.updateForm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating form',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Toggle form status (admin only) - NEW DEDICATED ENDPOINT
+exports.toggleFormStatus = async (req, res) => {
+  try {
+    await connectDB();
+    
+    const { formId } = req.params;
+    
+    console.log('Toggling form status for ID:', formId);
+    
+    // Check if form exists and belongs to admin
+    const form = await Form.findOne({ 
+      _id: formId,
+      createdBy: req.user.userId 
+    });
+    
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form not found or unauthorized'
+      });
+    }
+    
+    // Toggle the status
+    form.isActive = !form.isActive;
+    await form.save();
+    
+    console.log(`Form ${formId} status toggled to: ${form.isActive}`);
+    
+    res.json({
+      success: true,
+      message: `Form ${form.isActive ? 'activated' : 'deactivated'} successfully`,
+      data: {
+        _id: form._id,
+        isActive: form.isActive
+      }
+    });
+    
+  } catch (error) {
+    console.error('Toggle form status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error toggling form status',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
