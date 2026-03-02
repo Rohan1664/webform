@@ -6,6 +6,7 @@ import FormBuilder from '../components/admin/FormBuilder';
 import FormsList from '../components/admin/FormsList';
 import FormsListForSubmissions from '../components/admin/FormsListForSubmissions';
 import SubmissionsTable from '../components/admin/SubmissionsTable';
+import SubmissionDetails from '../components/admin/SubmissionDetails';
 
 const AdminPages = () => {
   return (
@@ -24,7 +25,7 @@ const AdminPages = () => {
       {/* Submissions routes */}
       <Route path="/submissions" element={<FormsListForSubmissions />} />
       <Route path="/submissions/:formId" element={<SubmissionsTable />} />
-      <Route path="/submissions/:formId/view/:submissionId" element={<div>Submission Details Page</div>} />
+      <Route path="/submissions/:formId/view/:submissionId" element={<SubmissionDetails />} />
       <Route path="/submissions/:formId/stats" element={<div>Submission Statistics Page</div>} />
       
       {/* Default redirect */}
