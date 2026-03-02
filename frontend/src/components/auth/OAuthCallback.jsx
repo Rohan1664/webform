@@ -11,39 +11,59 @@ const OAuthCallback = () => {
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
-      const params = new URLSearchParams(location.search);
-      const token = params.get('token');
-      const refreshToken = params.get('refreshToken');
-      const userStr = params.get('user');
-      const error = params.get('error');
+      try {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        const refreshToken = params.get('refreshToken');
+        const userStr = params.get('user');
+        const error = params.get('error');
 
-      if (error) {
-        toast.error('Authentication failed. Please try again.');
-        navigate('/login');
-        return;
-      }
+        console.log('OAuth callback params:', { 
+          token: !!token, 
+          refreshToken: !!refreshToken, 
+          userStr: !!userStr, 
+          error 
+        });
 
-      if (token && refreshToken && userStr) {
-        try {
-          const user = JSON.parse(decodeURIComponent(userStr));
-          
-          // Store tokens and user in localStorage
-          localStorage.setItem('token', token);
-          localStorage.setItem('refreshToken', refreshToken);
-          localStorage.setItem('user', JSON.stringify(user));
-          
-          // Update auth context
-          oauthLogin(user, token, refreshToken);
-          
-          toast.success(`Welcome, ${user.firstName || user.email}!`);
-          navigate('/');
-        } catch (error) {
-          console.error('OAuth callback error:', error);
-          toast.error('Failed to process login');
+        if (error) {
+          toast.error('Authentication failed. Please try again.');
+          navigate('/login');
+          return;
+        }
+
+        if (token && refreshToken && userStr) {
+          try {
+            const user = JSON.parse(decodeURIComponent(userStr));
+            
+            console.log('OAuth user data:', user);
+            
+            // Store tokens and user in localStorage
+            localStorage.setItem('token', token);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Update auth context
+            if (oauthLogin && typeof oauthLogin === 'function') {
+              oauthLogin(user, token, refreshToken);
+              toast.success(`Welcome, ${user.firstName || user.email}!`);
+              navigate('/');
+            } else {
+              console.error('oauthLogin is not a function');
+              // Fallback to page reload
+              window.location.href = '/';
+            }
+          } catch (parseError) {
+            console.error('Error parsing user data:', parseError);
+            toast.error('Failed to process login data');
+            navigate('/login');
+          }
+        } else {
+          toast.error('Invalid authentication response');
           navigate('/login');
         }
-      } else {
-        toast.error('Invalid authentication response');
+      } catch (err) {
+        console.error('OAuth callback error:', err);
+        toast.error('Authentication failed');
         navigate('/login');
       }
     };

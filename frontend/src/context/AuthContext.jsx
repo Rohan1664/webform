@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }) => {
       if (error.response?.data?.message) {
         const backendMessage = error.response.data.message.toLowerCase();
         
-        // More comprehensive email not found detection
         if (backendMessage.includes('email') && 
             (backendMessage.includes('not found') || 
              backendMessage.includes('does not exist') || 
@@ -73,7 +72,6 @@ export const AuthProvider = ({ children }) => {
           errorMessage = "Email not found. Please check your email or create a new account.";
           errorType = "email_not_found";
         }
-        // Check for invalid password
         else if (backendMessage.includes('password') && 
                  (backendMessage.includes('invalid') || 
                   backendMessage.includes('incorrect') ||
@@ -81,31 +79,21 @@ export const AuthProvider = ({ children }) => {
           errorMessage = "Incorrect password. Please try again.";
           errorType = "invalid_password";
         }
-        // Generic error
         else {
           errorMessage = error.response.data.message;
         }
       }
       
-      // If we can't determine from message, check status code and try to infer
       if (errorType === "generic" && error.response?.status === 401) {
-        // For 401 Unauthorized, we need to infer based on email format or other clues
-        // This is a fallback - ideally your backend should return different messages
-        
-        // You can add logic here to test if the email exists in your system
-        // For now, we'll use a simple check - if email contains valid format, assume password is wrong
         if (email.includes('@') && email.includes('.')) {
-          // If email format is valid, assume password is wrong
           errorMessage = "Incorrect password. Please try again.";
           errorType = "invalid_password";
         } else {
-          // If email format is invalid, show email error
           errorMessage = "Email not found. Please check your email or create a new account.";
           errorType = "email_not_found";
         }
       }
       
-      // Show appropriate toast with distinct icons
       if (errorType === "email_not_found") {
         toast.error(errorMessage, {
           duration: 5000,
@@ -153,12 +141,10 @@ export const AuthProvider = ({ children }) => {
       
       if (error.response?.data?.errors) {
         fieldErrors = error.response.data.errors;
-        // Get the first error message for toast
         const firstError = Object.values(fieldErrors)[0];
         if (firstError) {
           errorMessage = firstError;
           
-          // Check if it's an email already exists error
           if (firstError.toLowerCase().includes('email') && 
               (firstError.toLowerCase().includes('already') || 
                firstError.toLowerCase().includes('exist'))) {
@@ -192,6 +178,20 @@ export const AuthProvider = ({ children }) => {
     toast.success("Logged out successfully");
   }, []);
 
+  // ================= OAUTH LOGIN =================
+  const oauthLogin = useCallback((userData, token, refreshToken) => {
+    console.log('✅ OAuth login successful:', userData);
+    
+    // Set user and token in state
+    setUser(userData);
+    setToken(token);
+    
+    // Tokens are already stored in localStorage by the callback component
+    // But we ensure they're also in state
+    
+    toast.success(`Welcome, ${userData.firstName || userData.email}!`);
+  }, []);
+
   // ================= HELPERS =================
   const isAuthenticated = useCallback(() => {
     return !!user && !!token;
@@ -208,6 +208,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    oauthLogin, // ✅ ADDED THIS
     isAuthenticated,
     isAdmin,
   };
