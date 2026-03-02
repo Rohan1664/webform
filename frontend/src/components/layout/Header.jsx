@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaClipboardList, FaSignOutAlt, FaUser } from 'react-icons/fa';
+import { FaClipboardList, FaSignOutAlt, FaBars } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-const Header = () => {
+const Header = ({ toggleSidebar }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -21,33 +21,36 @@ const Header = () => {
   };
 
   return (
-    <div className="h-full w-full bg-white border-b border-gray-200 flex items-center px-6">
+    <div className="h-full w-full bg-white border-b border-gray-200 flex items-center px-4 sm:px-6">
       <div className="flex items-center justify-between w-full">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
-            <FaClipboardList className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-gray-900">
-            Dynamic Forms
-          </span>
-        </Link>
 
-        {/* Center Navigation - Browse Forms for everyone */}
-        {/* <div className="hidden md:flex items-center space-x-6">
-          <Link
-            to="/forms"
-            className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors flex items-center"
-          >
-            <FaEye className="mr-1 h-4 w-4" />
-            Browse Forms
+        {/* Left Section */}
+        <div className="flex items-center space-x-4">
+
+          {/* Hamburger (Mobile Only) */}
+          {isAuthenticated() && (
+            <button
+              onClick={toggleSidebar}
+              className="md:hidden text-gray-700 focus:outline-none"
+            >
+              <FaBars className="h-5 w-5" />
+            </button>
+          )}
+
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
+              <FaClipboardList className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-bold text-gray-900 hidden sm:block">
+              Dynamic Forms
+            </span>
           </Link>
-        </div> */}
+        </div>
 
-        {/* Right side - User info with logout button */}
+        {/* Right Section */}
         {isAuthenticated() ? (
           <div className="flex items-center space-x-4">
-            {/* User dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
@@ -63,22 +66,14 @@ const Header = () => {
                 </div>
               </button>
 
-              {/* Dropdown menu */}
+              {/* Dropdown */}
               {showDropdown && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setShowDropdown(false)}
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
-                    <Link
-                      to={user?.role === 'admin' ? '/admin/dashboard' : '/my-submissions'}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <FaUser className="mr-3 h-4 w-4 text-gray-500" />
-                      {user?.role === 'admin' ? 'Dashboard' : 'My Submissions'}
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left"

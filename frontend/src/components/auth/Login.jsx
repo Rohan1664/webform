@@ -30,7 +30,6 @@ const Login = () => {
       [name]: value,
     }));
     
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -38,7 +37,6 @@ const Login = () => {
       }));
     }
     
-    // Clear API error when user starts typing
     if (apiError) {
       setApiError('');
       setApiErrorType('');
@@ -66,7 +64,7 @@ const Login = () => {
     
     setApiError('');
     setApiErrorType('');
-    setErrors({}); // Clear all previous errors
+    setErrors({});
     
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
@@ -82,12 +80,8 @@ const Login = () => {
       if (result.success) {
         navigate(from, { replace: true });
       } else {
-        // Set API error based on error type from AuthContext
         setApiErrorType(result.errorType || 'generic');
         setApiError(result.error || 'Login failed');
-        
-        // Don't set field errors for API errors - let the box handle it
-        // This prevents duplicate error messages
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -97,7 +91,6 @@ const Login = () => {
     }
   };
 
-  // OAuth handlers
   const handleGoogleLogin = () => {
     const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
     window.location.href = `${backendUrl}/api/auth/google`;
@@ -109,13 +102,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
+        
+        {/* Header */}
+        <div className="text-center px-2">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">DF</span>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-5 text-2xl sm:text-3xl font-extrabold text-gray-900">
             Sign in to your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -126,19 +121,21 @@ const Login = () => {
           </p>
         </div>
         
-        <div className="card">
-          <div className="card-body">
-            {/* Email not found error - shows as a blue info box */}
+        {/* Card */}
+        <div className="card w-full">
+          <div className="card-body p-5 sm:p-6">
+            
+            {/* Email not found */}
             {apiError && apiErrorType === 'email_not_found' && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex">
+                <div className="flex items-start">
                   <FaExclamationCircle className="text-blue-500 mt-0.5 mr-3 flex-shrink-0" size={18} />
-                  <div>
-                    <p className="text-sm font-medium text-blue-800">Account not found</p>
-                    <p className="text-sm text-blue-700 mt-1">{apiError}</p>
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800">Account not found</p>
+                    <p className="text-blue-700 mt-1">{apiError}</p>
                     <Link 
                       to="/register" 
-                      className="text-sm font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
+                      className="font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
                     >
                       Create a new account →
                     </Link>
@@ -147,17 +144,17 @@ const Login = () => {
               </div>
             )}
             
-            {/* Invalid password error - shows as a yellow warning box */}
+            {/* Invalid password */}
             {apiError && apiErrorType === 'invalid_password' && (
               <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                <div className="flex">
+                <div className="flex items-start">
                   <FaExclamationCircle className="text-yellow-500 mt-0.5 mr-3 flex-shrink-0" size={18} />
-                  <div>
-                    <p className="text-sm font-medium text-yellow-800">Incorrect password</p>
-                    <p className="text-sm text-yellow-700 mt-1">{apiError}</p>
+                  <div className="text-sm">
+                    <p className="font-medium text-yellow-800">Incorrect password</p>
+                    <p className="text-yellow-700 mt-1">{apiError}</p>
                     <Link 
                       to="/forgot-password" 
-                      className="text-sm font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
+                      className="font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
                     >
                       Forgot your password? →
                     </Link>
@@ -166,28 +163,28 @@ const Login = () => {
               </div>
             )}
             
-            {/* Generic error - shows as a red error box */}
+            {/* Generic error */}
             {apiError && apiErrorType === 'generic' && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{apiError}</p>
               </div>
             )}
             
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <Input
-                  label="Email address"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={errors.email} // Only shows validation errors, not API errors
-                  icon={FaEnvelope}
-                  placeholder="you@example.com"
-                  required
-                  autoComplete="email"
-                />
-              </div>
+            {/* Form */}
+            <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
+              
+              <Input
+                label="Email address"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                icon={FaEnvelope}
+                placeholder="you@example.com"
+                required
+                autoComplete="email"
+              />
               
               <div>
                 <Input
@@ -196,13 +193,13 @@ const Login = () => {
                   type="password"
                   value={formData.password}
                   onChange={handleChange}
-                  error={errors.password} // Only shows validation errors, not API errors
+                  error={errors.password}
                   icon={FaLock}
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
                 />
-                <div className="flex items-center justify-end mt-2">
+                <div className="flex justify-end mt-2">
                   <Link
                     to="/forgot-password"
                     className="text-sm text-primary-600 hover:text-primary-500"
@@ -212,17 +209,15 @@ const Login = () => {
                 </div>
               </div>
               
-              <div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  loading={isLoading}
-                  className="w-full"
-                >
-                  Sign in
-                </Button>
-              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                className="w-full"
+              >
+                Sign in
+              </Button>
               
               {isLoading && (
                 <div className="text-center">
@@ -231,6 +226,7 @@ const Login = () => {
               )}
             </form>
             
+            {/* Divider */}
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -243,18 +239,19 @@ const Login = () => {
                 </div>
               </div>
               
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              {/* OAuth Buttons */}
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
                 >
                   Google
                 </button>
                 <button
                   type="button"
                   onClick={handleGitHubLogin}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
                 >
                   GitHub
                 </button>
@@ -263,8 +260,9 @@ const Login = () => {
           </div>
         </div>
         
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
+        {/* Footer */}
+        <div className="text-center px-2">
+          <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
             By signing in, you agree to our{' '}
             <Link to="/terms" className="font-medium text-primary-600 hover:text-primary-500">
               Terms of Service

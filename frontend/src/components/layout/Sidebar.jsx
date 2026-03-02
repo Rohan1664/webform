@@ -30,15 +30,28 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="
+      fixed md:static
+      z-40
+      h-full
+      w-64
+      md:w-64
+      bg-white
+      flex flex-col
+      border-r border-gray-200
+      transform
+      md:translate-x-0
+      transition-transform duration-300 ease-in-out
+    ">
       {/* User Profile */}
-      <div className="p-5 border-b border-gray-100">
+      <div className="p-4 md:p-5 border-b border-gray-100">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
             <span className="text-white font-semibold text-lg">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </span>
           </div>
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">
               {user?.firstName} {user?.lastName}
@@ -52,7 +65,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2 md:px-3 py-4 space-y-1 overflow-y-auto">
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -65,8 +78,8 @@ const Sidebar = () => {
               }`
             }
           >
-            <link.icon className="h-5 w-5" />
-            <span>{link.label}</span>
+            <link.icon className="h-5 w-5 flex-shrink-0" />
+            <span className="truncate">{link.label}</span>
           </NavLink>
         ))}
       </nav>

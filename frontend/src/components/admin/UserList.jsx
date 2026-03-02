@@ -8,7 +8,8 @@ import {
   FaFileExcel,
   FaFileCsv,
   FaSave,
-  FaTimes
+  FaTimes,
+  FaFilter
 } from 'react-icons/fa';
 import { adminAPI } from '../../api/admin.api';
 import Input from '../common/Input';
@@ -24,6 +25,7 @@ const UserList = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -255,32 +257,43 @@ const UserList = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
       {/* Page header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">User Management</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">
             Manage registered users and their permissions
           </p>
         </div>
-        {(search || roleFilter || statusFilter) && (
-          <Button variant="outline" size="sm" onClick={clearFilters}>
-            Clear Filters
-          </Button>
-        )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+          {(search || roleFilter || statusFilter) && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+              Clear Filters
+            </Button>
+          )}
+          {/* Mobile filter toggle */}
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="sm:hidden flex items-center justify-center w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg"
+          >
+            <FaFilter className="mr-2" />
+            {showMobileFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+        </div>
       </div>
 
       {/* Filters and search */}
       <div className="card">
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
+          <div className={`grid grid-cols-1 gap-4 ${showMobileFilters ? 'block' : 'hidden sm:grid'}`}>
+            <div className="w-full">
               <Input
                 placeholder="Search users by name or email..."
                 value={search}
                 onChange={handleSearch}
                 icon={FaSearch}
+                className="w-full"
               />
             </div>
             
@@ -313,191 +326,341 @@ const UserList = () => {
 
       {error && <Alert type="error" title="Error" message={error} />}
 
-      {/* Users table */}
-      <div className="card">
-        <div className="table-container">
-          <table className="table">
-            <thead className="table-header">
-              <tr>
-                <th className="table-header-cell">User</th>
-                <th className="table-header-cell">Email</th>
-                <th className="table-header-cell">Role</th>
-                <th className="table-header-cell">Status</th>
-                <th className="table-header-cell">Joined</th>
-                <th className="table-header-cell">Last Login</th>
-                <th className="table-header-cell">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {users.length === 0 ? (
+      {/* Users table - Mobile card view */}
+      <div className="card overflow-hidden">
+        {/* Desktop table view */}
+        <div className="hidden md:block">
+          <div className="table-container">
+            <table className="table">
+              <thead className="table-header">
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center">
-                      <FaSearch className="h-12 w-12 text-gray-400 mb-4" />
-                      <p className="text-lg font-medium text-gray-900 mb-2">No users found</p>
-                      <p className="text-sm text-gray-600">
-                        {search || roleFilter || statusFilter 
-                          ? 'No users match your filters' 
-                          : 'There are no users to display'}
-                      </p>
-                    </div>
-                  </td>
+                  <th className="table-header-cell">User</th>
+                  <th className="table-header-cell">Email</th>
+                  <th className="table-header-cell">Role</th>
+                  <th className="table-header-cell">Status</th>
+                  <th className="table-header-cell">Joined</th>
+                  <th className="table-header-cell">Last Login</th>
+                  <th className="table-header-cell">Actions</th>
                 </tr>
-              ) : (
-                users.map((user) => (
-                  <tr key={user._id} className="table-row hover:bg-gray-50">
-                    <td className="table-cell">
-                      {editingUser === user._id ? (
-                        <div className="space-y-2">
-                          <Input
-                            name="firstName"
-                            value={editFormData.firstName}
-                            onChange={handleEditChange}
-                            placeholder="First name"
-                            size="sm"
-                          />
-                          <Input
-                            name="lastName"
-                            value={editFormData.lastName}
-                            onChange={handleEditChange}
-                            placeholder="Last name"
-                            size="sm"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                            <span className="text-primary-600 font-medium">
-                              {user.firstName?.[0]}{user.lastName?.[0]}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="font-medium text-gray-900">
-                              {user.firstName} {user.lastName}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      {editingUser === user._id ? (
-                        <Input
-                          name="email"
-                          type="email"
-                          value={editFormData.email}
-                          onChange={handleEditChange}
-                          placeholder="Email"
-                          size="sm"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-900">{user.email}</div>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      {editingUser === user._id ? (
-                        <select
-                          name="role"
-                          value={editFormData.role}
-                          onChange={handleEditChange}
-                          className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      ) : (
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        user.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="table-cell text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="table-cell text-sm text-gray-500">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="table-cell">
-                      <div className="flex items-center space-x-2">
-                        {editingUser === user._id ? (
-                          <>
-                            <button
-                              onClick={() => handleSaveEdit(user._id)}
-                              className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50"
-                              title="Save"
-                            >
-                              <FaSave className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50"
-                              title="Cancel"
-                            >
-                              <FaTimes className="h-4 w-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleStatusToggle(user._id, user.isActive)}
-                              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
-                              title={user.isActive ? 'Deactivate' : 'Activate'}
-                            >
-                              {user.isActive ? (
-                                <FaUserTimes className="h-4 w-4 text-red-600" />
-                              ) : (
-                                <FaUserCheck className="h-4 w-4 text-green-600" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleEditClick(user)}
-                              className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
-                              title="Edit User"
-                            >
-                              <FaEdit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
-                              className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50"
-                              title="Delete User"
-                            >
-                              <FaTrash className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <FaSearch className="h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-lg font-medium text-gray-900 mb-2">No users found</p>
+                        <p className="text-sm text-gray-600">
+                          {search || roleFilter || statusFilter 
+                            ? 'No users match your filters' 
+                            : 'There are no users to display'}
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user._id} className="table-row hover:bg-gray-50">
+                      <td className="table-cell">
+                        {editingUser === user._id ? (
+                          <div className="space-y-2">
+                            <Input
+                              name="firstName"
+                              value={editFormData.firstName}
+                              onChange={handleEditChange}
+                              placeholder="First name"
+                              size="sm"
+                            />
+                            <Input
+                              name="lastName"
+                              value={editFormData.lastName}
+                              onChange={handleEditChange}
+                              placeholder="Last name"
+                              size="sm"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-primary-600 font-medium">
+                                {user.firstName?.[0]}{user.lastName?.[0]}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="font-medium text-gray-900 break-words">
+                                {user.firstName} {user.lastName}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                      <td className="table-cell">
+                        {editingUser === user._id ? (
+                          <Input
+                            name="email"
+                            type="email"
+                            value={editFormData.email}
+                            onChange={handleEditChange}
+                            placeholder="Email"
+                            size="sm"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-900 break-all">{user.email}</div>
+                        )}
+                      </td>
+                      <td className="table-cell">
+                        {editingUser === user._id ? (
+                          <select
+                            name="role"
+                            value={editFormData.role}
+                            onChange={handleEditChange}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        )}
+                      </td>
+                      <td className="table-cell">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          user.isActive 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="table-cell text-sm text-gray-500 whitespace-nowrap">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="table-cell text-sm text-gray-500 whitespace-nowrap">
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td className="table-cell">
+                        <div className="flex items-center space-x-2">
+                          {editingUser === user._id ? (
+                            <>
+                              <button
+                                onClick={() => handleSaveEdit(user._id)}
+                                className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50"
+                                title="Save"
+                              >
+                                <FaSave className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-2 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-50"
+                                title="Cancel"
+                              >
+                                <FaTimes className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleStatusToggle(user._id, user.isActive)}
+                                className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+                                title={user.isActive ? 'Deactivate' : 'Activate'}
+                              >
+                                {user.isActive ? (
+                                  <FaUserTimes className="h-4 w-4 text-red-600" />
+                                ) : (
+                                  <FaUserCheck className="h-4 w-4 text-green-600" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleEditClick(user)}
+                                className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
+                                title="Edit User"
+                              >
+                                <FaEdit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                                className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50"
+                                title="Delete User"
+                              >
+                                <FaTrash className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile card view */}
+        <div className="block md:hidden">
+          {users.length === 0 ? (
+            <div className="px-4 py-12 text-center text-gray-500">
+              <div className="flex flex-col items-center">
+                <FaSearch className="h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-lg font-medium text-gray-900 mb-2">No users found</p>
+                <p className="text-sm text-gray-600">
+                  {search || roleFilter || statusFilter 
+                    ? 'No users match your filters' 
+                    : 'There are no users to display'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {users.map((user) => (
+                <div key={user._id} className="p-4 space-y-3">
+                  {editingUser === user._id ? (
+                    // Edit mode for mobile
+                    <div className="space-y-3">
+                      <Input
+                        name="firstName"
+                        value={editFormData.firstName}
+                        onChange={handleEditChange}
+                        placeholder="First name"
+                        size="sm"
+                      />
+                      <Input
+                        name="lastName"
+                        value={editFormData.lastName}
+                        onChange={handleEditChange}
+                        placeholder="Last name"
+                        size="sm"
+                      />
+                      <Input
+                        name="email"
+                        type="email"
+                        value={editFormData.email}
+                        onChange={handleEditChange}
+                        placeholder="Email"
+                        size="sm"
+                      />
+                      <select
+                        name="role"
+                        value={editFormData.role}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <div className="flex space-x-2 pt-2">
+                        <button
+                          onClick={() => handleSaveEdit(user._id)}
+                          className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center"
+                        >
+                          <FaSave className="mr-2" /> Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="flex-1 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 flex items-center justify-center"
+                        >
+                          <FaTimes className="mr-2" /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View mode for mobile
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-12 w-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-primary-600 font-medium text-lg">
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 break-words">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500 break-all">{user.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end space-y-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            user.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+                        <div>
+                          <span className="font-medium">Joined:</span> {new Date(user.createdAt).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="font-medium">Last login:</span> {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                        <button
+                          onClick={() => handleStatusToggle(user._id, user.isActive)}
+                          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center text-sm"
+                        >
+                          {user.isActive ? (
+                            <>
+                              <FaUserTimes className="mr-2 text-red-600" /> Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <FaUserCheck className="mr-2 text-green-600" /> Activate
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleEditClick(user)}
+                          className="flex-1 py-2 px-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 flex items-center justify-center text-sm"
+                        >
+                          <FaEdit className="mr-2" /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                          className="flex-1 py-2 px-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 flex items-center justify-center text-sm"
+                        >
+                          <FaTrash className="mr-2" /> Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="card-footer">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700 text-center sm:text-left">
                 Showing <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(pagination.page * pagination.limit, pagination.totalUsers)}
                 </span>{' '}
                 of <span className="font-medium">{pagination.totalUsers}</span> users
               </div>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -506,7 +669,7 @@ const UserList = () => {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-gray-700 px-2">
                   Page {pagination.page} of {pagination.totalPages}
                 </span>
                 <Button
@@ -526,7 +689,7 @@ const UserList = () => {
       {/* Export options */}
       <div className="card">
         <div className="card-body">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-medium text-gray-900">Export Data</h3>
               <p className="text-sm text-gray-600">
@@ -538,12 +701,13 @@ const UserList = () => {
                 </p>
               )}
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Button 
                 variant="outline" 
                 icon={FaFileCsv}
                 onClick={() => handleExport('csv')}
                 disabled={users.length === 0}
+                className="w-full sm:w-auto justify-center"
               >
                 Export CSV
               </Button>
@@ -552,6 +716,7 @@ const UserList = () => {
                 icon={FaFileExcel}
                 onClick={() => handleExport('excel')}
                 disabled={users.length === 0}
+                className="w-full sm:w-auto justify-center"
               >
                 Export Excel
               </Button>

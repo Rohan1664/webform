@@ -265,7 +265,7 @@ const FormBuilder = () => {
     
     return (
       <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Field Label"
             value={field.label}
@@ -302,7 +302,7 @@ const FormBuilder = () => {
               Options
             </label>
             {field.options?.map((option, index) => (
-              <div key={index} className="flex items-center space-x-2">
+              <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <Input
                   value={option.label}
                   onChange={(e) => {
@@ -315,7 +315,7 @@ const FormBuilder = () => {
                     updateField(field._id, { options: newOptions });
                   }}
                   placeholder="Option label"
-                  containerClassName="flex-1"
+                  containerClassName="w-full sm:flex-1"
                 />
                 <Input
                   value={option.value}
@@ -328,7 +328,7 @@ const FormBuilder = () => {
                     updateField(field._id, { options: newOptions });
                   }}
                   placeholder="Option value"
-                  containerClassName="flex-1"
+                  containerClassName="w-full sm:flex-1"
                 />
                 <Button
                   variant="outline"
@@ -337,6 +337,7 @@ const FormBuilder = () => {
                     const newOptions = field.options.filter((_, i) => i !== index);
                     updateField(field._id, { options: newOptions });
                   }}
+                  className="w-full sm:w-auto"
                 >
                   <FaTrash className="h-4 w-4" />
                 </Button>
@@ -355,6 +356,7 @@ const FormBuilder = () => {
                 ];
                 updateField(field._id, { options: newOptions });
               }}
+              className="w-full sm:w-auto"
             >
               Add Option
             </Button>
@@ -363,7 +365,7 @@ const FormBuilder = () => {
         
         {isFileField && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Allowed File Types
@@ -385,7 +387,7 @@ const FormBuilder = () => {
                         }}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="ml-2 text-sm text-gray-900">{fileType.label}</span>
+                      <span className="ml-2 text-sm text-gray-900 break-words">{fileType.label}</span>
                     </label>
                   ))}
                 </div>
@@ -413,7 +415,7 @@ const FormBuilder = () => {
         <div className="space-y-3 border-t pt-4">
           <h4 className="text-sm font-medium text-gray-700">Validation Rules</h4>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -488,34 +490,36 @@ const FormBuilder = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
+    <div className="space-y-6 px-4 sm:px-6 lg:px-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
           <Button
             variant="outline"
             icon={FaArrowLeft}
             onClick={() => navigate('/admin/forms')}
+            className="w-full sm:w-auto"
           >
             Back
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+          <div className="w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
               {isEditMode ? 'Edit Form' : 'Create New Form'}
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-sm sm:text-base text-gray-600 break-words">
               {isEditMode 
                 ? 'Modify your form configuration' 
                 : 'Create and customize your form with drag-and-drop fields'}
             </p>
           </div>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
           <Button 
             variant="outline" 
             icon={FaEye} 
             onClick={handlePreview}
             disabled={!formId}
             title={!formId ? 'Save the form first to preview' : 'Preview form'}
+            className="w-full sm:w-auto"
           >
             Preview
           </Button>
@@ -524,6 +528,7 @@ const FormBuilder = () => {
             icon={FaSave} 
             onClick={handleSubmit}
             loading={submitting}
+            className="w-full sm:w-auto"
           >
             {isEditMode ? 'Update Form' : 'Save Form'}
           </Button>
@@ -571,7 +576,7 @@ const FormBuilder = () => {
                       })}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-900">
+                    <span className="ml-2 text-sm text-gray-900 break-words">
                       Allow multiple submissions from same user
                     </span>
                   </label>
@@ -586,7 +591,7 @@ const FormBuilder = () => {
                       })}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-900">
+                    <span className="ml-2 text-sm text-gray-900 break-words">
                       Require login to submit
                     </span>
                   </label>
@@ -623,7 +628,7 @@ const FormBuilder = () => {
                   placeholder="https://example.com/thank-you"
                 />
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Start Date"
                     type="datetime-local"
@@ -680,20 +685,20 @@ const FormBuilder = () => {
               <h3 className="text-lg font-medium text-gray-900">Add Fields</h3>
             </div>
             <div className="card-body">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
                 {FIELD_TYPES.map((fieldType) => (
                   <button
                     key={fieldType.value}
                     type="button"
                     onClick={() => addField(fieldType.value)}
-                    className="flex flex-col items-center justify-center p-4 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
                   >
-                    <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center mb-2">
-                      <span className="text-primary-600 font-medium">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 bg-primary-100 rounded-full flex items-center justify-center mb-2">
+                      <span className="text-primary-600 font-medium text-sm sm:text-base">
                         {fieldType.label.charAt(0)}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-xs sm:text-sm font-medium text-gray-900 text-center break-words">
                       {fieldType.label}
                     </span>
                   </button>
@@ -723,14 +728,14 @@ const FormBuilder = () => {
                     className="card-body space-y-4"
                   >
                     {fields.length === 0 ? (
-                      <div className="text-center py-12">
-                        <div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                          <FaPlus className="h-8 w-8 text-gray-400" />
+                      <div className="text-center py-8 sm:py-12">
+                        <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                          <FaPlus className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 break-words">
                           No fields added yet
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-sm sm:text-base text-gray-600 break-words">
                           Add fields from the left panel to start building your form
                         </p>
                       </div>
@@ -747,29 +752,30 @@ const FormBuilder = () => {
                               {...provided.draggableProps}
                               className="border border-gray-200 rounded-lg overflow-hidden"
                             >
-                              <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b">
-                                <div className="flex items-center space-x-3">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 px-4 py-3 border-b space-y-2 sm:space-y-0">
+                                <div className="flex items-center space-x-3 w-full sm:w-auto">
                                   <div
                                     {...provided.dragHandleProps}
                                     className="cursor-move text-gray-400 hover:text-gray-600"
                                   >
                                     <FaGripVertical className="h-5 w-5" />
                                   </div>
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-2 flex-wrap">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                       {field.fieldType}
                                     </span>
-                                    <span className="font-medium text-gray-900">
+                                    <span className="font-medium text-gray-900 break-words">
                                       {field.label}
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => duplicateField(field)}
                                     title="Duplicate"
+                                    className="flex-1 sm:flex-none"
                                   >
                                     <FaCopy className="h-4 w-4" />
                                   </Button>
@@ -778,6 +784,7 @@ const FormBuilder = () => {
                                     size="sm"
                                     onClick={() => removeField(field._id)}
                                     title="Delete"
+                                    className="flex-1 sm:flex-none"
                                   >
                                     <FaTrash className="h-4 w-4 text-red-600" />
                                   </Button>

@@ -28,7 +28,6 @@ const Register = () => {
       [name]: value,
     }));
     
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -36,7 +35,6 @@ const Register = () => {
       }));
     }
     
-    // Clear confirm password error when password changes
     if (name === 'password' && errors.confirmPassword) {
       setErrors(prev => ({
         ...prev,
@@ -94,7 +92,6 @@ const Register = () => {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        // role is not sent - backend will default to 'user'
       };
       
       const result = await register(userData);
@@ -109,13 +106,15 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
+        
+        {/* Header */}
+        <div className="text-center px-2">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">DF</span>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-5 text-2xl sm:text-3xl font-extrabold text-gray-900">
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -123,10 +122,14 @@ const Register = () => {
           </p>
         </div>
         
-        <div className="card">
-          <div className="card-body">
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Card */}
+        <div className="card w-full">
+          <div className="card-body p-5 sm:p-6">
+            
+            <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
+              
+              {/* Name Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="First name"
                   name="firstName"
@@ -194,15 +197,16 @@ const Register = () => {
                 autoComplete="new-password"
               />
               
-              <div className="flex items-center">
+              {/* Terms */}
+              <div className="flex items-start space-x-2">
                 <input
                   id="terms"
                   name="terms"
                   type="checkbox"
                   required
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="terms" className="text-sm text-gray-900 leading-relaxed">
                   I agree to the{' '}
                   <Link to="/terms" className="text-primary-600 hover:text-primary-500">
                     Terms of Service
@@ -214,17 +218,15 @@ const Register = () => {
                 </label>
               </div>
               
-              <div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  loading={isLoading}
-                  className="w-full"
-                >
-                  Create account
-                </Button>
-              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                className="w-full"
+              >
+                Create account
+              </Button>
               
               {isLoading && (
                 <div className="text-center">
@@ -246,14 +248,14 @@ const Register = () => {
                 </div>
               </div>
               
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
                     window.location.href = `${backendUrl}/api/auth/google`;
                   }}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
                 >
                   Google
                 </button>
@@ -263,7 +265,7 @@ const Register = () => {
                     const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
                     window.location.href = `${backendUrl}/api/auth/github`;
                   }}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
                 >
                   GitHub
                 </button>
@@ -272,8 +274,9 @@ const Register = () => {
           </div>
         </div>
         
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
+        {/* Footer */}
+        <div className="text-center px-2">
+          <p className="text-xs sm:text-sm text-gray-600">
             Already have an account?{' '}
             <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
               Sign in here

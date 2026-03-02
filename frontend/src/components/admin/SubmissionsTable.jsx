@@ -197,7 +197,7 @@ const SubmissionsTable = () => {
 
   if (!formId) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center px-4 py-8 sm:py-12">
         <Alert type="error" title="Error" message="Form ID is required" />
         <div className="mt-4">
           <Button variant="primary" onClick={() => navigate('/admin/submissions')}>
@@ -217,32 +217,34 @@ const SubmissionsTable = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Page header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <Button
             variant="outline"
             icon={FaArrowLeft}
             onClick={() => navigate('/admin/submissions')}
+            className="self-start sm:self-auto w-full sm:w-auto justify-center sm:justify-start"
           >
             Back to Forms
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
               {form?.title || 'Form'} Submissions
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 break-words">
               {form?.description || 'View and manage form submissions'}
             </p>
           </div>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <Button 
             variant="outline" 
             icon={FaFileCsv} 
             onClick={() => handleExport('csv')}
             disabled={submissions.length === 0}
+            className="w-full sm:w-auto justify-center"
           >
             CSV
           </Button>
@@ -251,6 +253,7 @@ const SubmissionsTable = () => {
             icon={FaFileExcel} 
             onClick={() => handleExport('excel')}
             disabled={submissions.length === 0}
+            className="w-full sm:w-auto justify-center"
           >
             Excel
           </Button>
@@ -258,15 +261,16 @@ const SubmissionsTable = () => {
       </div>
 
       {/* Filters and search */}
-      <div className="card">
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
+      <div className="card overflow-hidden">
+        <div className="card-body p-4 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-2">
               <Input
                 placeholder="Search submissions..."
                 value={search}
                 onChange={handleSearch}
                 icon={FaSearch}
+                className="w-full"
               />
             </div>
             
@@ -277,6 +281,7 @@ const SubmissionsTable = () => {
                 value={dateRange.startDate}
                 onChange={(e) => handleDateChange('startDate', e.target.value)}
                 icon={FaCalendar}
+                className="w-full"
               />
             </div>
             
@@ -287,6 +292,7 @@ const SubmissionsTable = () => {
                 value={dateRange.endDate}
                 onChange={(e) => handleDateChange('endDate', e.target.value)}
                 icon={FaCalendar}
+                className="w-full"
               />
             </div>
           </div>
@@ -298,6 +304,7 @@ const SubmissionsTable = () => {
                 size="sm"
                 onClick={clearFilters}
                 icon={FaFilter}
+                className="w-full sm:w-auto"
               >
                 Clear Filters
               </Button>
@@ -309,28 +316,38 @@ const SubmissionsTable = () => {
       {error && <Alert type="error" title="Error" message={error} />}
 
       {/* Submissions table */}
-      <div className="card">
-        <div className="table-container">
-          <table className="table">
-            <thead className="table-header">
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="table-header-cell">Submitted By</th>
-                <th className="table-header-cell">Submission Date</th>
-                <th className="table-header-cell">Files</th>
-                <th className="table-header-cell">Status</th>
-                <th className="table-header-cell">Actions</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Submitted By
+                </th>
+                <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Submission Date
+                </th>
+                <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Files
+                </th>
+                <th className="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {submissions.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="5" className="px-4 sm:px-6 py-8 sm:py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center">
-                      <FaEye className="h-12 w-12 text-gray-400 mb-4" />
-                      <p className="text-lg font-medium text-gray-900 mb-2">
+                      <FaEye className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-4" />
+                      <p className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                         No submissions found
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs sm:text-sm text-gray-600 max-w-sm">
                         {search || dateRange.startDate || dateRange.endDate
                           ? 'No submissions match your filters'
                           : 'This form has no submissions yet'}
@@ -340,47 +357,78 @@ const SubmissionsTable = () => {
                 </tr>
               ) : (
                 submissions.map((submission) => (
-                  <tr key={submission._id} className="table-row hover:bg-gray-50">
-                    <td className="table-cell">
-                      <div className="flex items-center">
-                        {submission.submittedBy ? (
-                          <>
-                            <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
-                              <span className="text-primary-600 font-medium">
-                                {submission.submittedBy.firstName?.[0]}{submission.submittedBy.lastName?.[0]}
-                              </span>
+                  <tr key={submission._id} className="hover:bg-gray-50">
+                    <td className="px-4 sm:px-6 py-4 whitespace-normal">
+                      <div className="flex items-center min-w-0">
+                        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 bg-primary-100 rounded-full flex items-center justify-center">
+                          <span className="text-primary-600 text-xs sm:text-sm font-medium">
+                            {submission.submittedBy?.firstName?.[0]}{submission.submittedBy?.lastName?.[0]}
+                          </span>
+                        </div>
+                        <div className="ml-2 sm:ml-4 min-w-0">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-[200px]">
+                            {submission.submittedBy ? (
+                              `${submission.submittedBy.firstName} ${submission.submittedBy.lastName}`
+                            ) : (
+                              'Anonymous User'
+                            )}
+                          </div>
+                          {submission.submittedBy && (
+                            <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-[200px]">
+                              {submission.submittedBy.email}
                             </div>
-                            <div className="ml-4">
-                              <div className="font-medium text-gray-900">
-                                {submission.submittedBy.firstName} {submission.submittedBy.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {submission.submittedBy.email}
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-gray-500">Anonymous User</div>
-                        )}
+                          )}
+                        </div>
+                      </div>
+                      {/* Mobile metadata */}
+                      <div className="mt-2 sm:hidden space-y-1">
+                        <div className="text-xs text-gray-500">
+                          {formatDate(submission.submittedAt, 'MMM DD, YYYY HH:mm')}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {submission.files?.map((file, index) => (
+                            <a
+                              key={index}
+                              href={`${process.env.REACT_APP_UPLOADS_URL}/${file.fileName}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            >
+                              <FaDownload className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                              <span className="truncate max-w-[100px]">{file.originalName}</span>
+                            </a>
+                          ))}
+                          {(!submission.files || submission.files.length === 0) && (
+                            <span className="text-gray-400 text-xs">No files</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            submission.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            submission.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {submission.status || 'pending'}
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td className="table-cell">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(submission.submittedAt, 'MMM DD, YYYY HH:mm')}
-                      </div>
+                    <td className="hidden sm:table-cell px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(submission.submittedAt, 'MMM DD, YYYY HH:mm')}
                     </td>
-                    <td className="table-cell">
-                      <div className="flex flex-wrap gap-1">
+                    <td className="hidden md:table-cell px-4 sm:px-6 py-4">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
                         {submission.files?.map((file, index) => (
                           <a
                             key={index}
                             href={`${process.env.REACT_APP_UPLOADS_URL}/${file.fileName}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 truncate max-w-[150px]"
                           >
-                            <FaDownload className="h-3 w-3 mr-1" />
-                            {file.originalName}
+                            <FaDownload className="h-3 w-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{file.originalName}</span>
                           </a>
                         ))}
                         {(!submission.files || submission.files.length === 0) && (
@@ -388,7 +436,7 @@ const SubmissionsTable = () => {
                         )}
                       </div>
                     </td>
-                    <td className="table-cell">
+                    <td className="hidden lg:table-cell px-4 sm:px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         submission.status === 'approved' ? 'bg-green-100 text-green-800' :
                         submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -398,22 +446,22 @@ const SubmissionsTable = () => {
                         {submission.status || 'pending'}
                       </span>
                     </td>
-                    <td className="table-cell">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <Link to={`/admin/submissions/${formId}/view/${submission._id}`}>
                           <button
-                            className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
+                            className="p-1.5 sm:p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
                             title="View Details"
                           >
-                            <FaEye className="h-4 w-4" />
+                            <FaEye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </button>
                         </Link>
                         <button
                           onClick={() => handleDelete(submission._id)}
-                          className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50"
+                          className="p-1.5 sm:p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
                           title="Delete"
                         >
-                          <FaTrash className="h-4 w-4" />
+                          <FaTrash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </button>
                       </div>
                     </td>
@@ -426,16 +474,43 @@ const SubmissionsTable = () => {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="card-footer">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+          <div className="card-footer px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
                 Showing <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(pagination.page * pagination.limit, pagination.totalSubmissions)}
                 </span>{' '}
                 of <span className="font-medium">{pagination.totalSubmissions}</span> submissions
               </div>
-              <div className="flex space-x-2">
+              
+              {/* Mobile pagination - simplified */}
+              <div className="flex sm:hidden justify-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  className="px-3"
+                >
+                  Prev
+                </Button>
+                <span className="inline-flex items-center px-3 py-1 text-sm bg-gray-100 rounded-md">
+                  {pagination.page} / {pagination.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.totalPages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  className="px-3"
+                >
+                  Next
+                </Button>
+              </div>
+              
+              {/* Desktop pagination */}
+              <div className="hidden sm:flex sm:space-x-2">
                 <Button
                   variant="outline"
                   size="sm"

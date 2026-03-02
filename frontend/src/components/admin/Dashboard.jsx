@@ -96,7 +96,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)] w-full">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] w-full px-4">
         <Loader size="lg" text="Loading dashboard..." />
       </div>
     );
@@ -104,7 +104,7 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="w-full px-6">
+      <div className="w-full px-4 sm:px-6">
         <Alert
           type="error"
           title="Error Loading Dashboard"
@@ -116,6 +116,7 @@ const Dashboard = () => {
             variant="primary"
             onClick={fetchDashboardStats}
             icon={FaSync}
+            className="w-full sm:w-auto justify-center"
           >
             Retry
           </Button>
@@ -125,12 +126,12 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6 w-full min-h-[4rem] overflow-x-hidden">
+    <div className="space-y-4 sm:space-y-6 w-full min-h-screen overflow-x-hidden px-4 sm:px-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-gray-600">
+        <div className="w-full sm:w-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Dashboard</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 break-words">
             Welcome back! Here's what's happening with your forms today.
           </p>
         </div>
@@ -138,39 +139,40 @@ const Dashboard = () => {
           variant="primary"
           icon={FaUserPlus}
           onClick={() => navigate('/admin/users?action=add')}
+          className="w-full sm:w-auto justify-center whitespace-nowrap"
         >
           Add New User
         </Button>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats cards - Responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map((stat, index) => (
           <div
             key={index}
-            className="card hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
+            className="card hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1 w-full"
             onClick={stat.onClick}
           >
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900">
+                <div className="min-w-0 flex-1 pr-2">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{stat.title}</p>
+                  <p className="mt-1 sm:mt-2 text-xl sm:text-3xl font-bold text-gray-900 break-words">
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center mt-1 sm:mt-2 min-w-0">
                     {stat.trendUp ? (
-                      <FaArrowUp className="h-4 w-4 text-green-500 mr-1" />
+                      <FaArrowUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 flex-shrink-0" />
                     ) : (
-                      <FaArrowDown className="h-4 w-4 text-red-500 mr-1" />
+                      <FaArrowDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 mr-1 flex-shrink-0" />
                     )}
-                    <span className={`text-sm ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-xs sm:text-sm truncate ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
                       {stat.trend}
                     </span>
                   </div>
                 </div>
-                <div className={`${stat.color} p-3 rounded-lg shadow-lg`}>
-                  <stat.icon className="h-6 w-6 text-white" />
+                <div className={`${stat.color} p-2 sm:p-3 rounded-lg shadow-lg flex-shrink-0`}>
+                  <stat.icon className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                 </div>
               </div>
             </div>
@@ -178,47 +180,48 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Charts section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts section - Responsive */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Forms by month chart */}
-        <div className="card">
-          <div className="card-header flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Forms Created</h3>
-              <p className="text-sm text-gray-500">Last 6 months</p>
+        <div className="card w-full">
+          <div className="card-header p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 break-words">Forms Created</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Last 6 months</p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/admin/forms')}
+              className="w-full sm:w-auto justify-center whitespace-nowrap"
             >
               View All Forms
             </Button>
           </div>
-          <div className="card-body">
+          <div className="card-body p-4 sm:p-6 pt-0 sm:pt-0">
             {charts.formsByMonth?.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {charts.formsByMonth.map((item, index) => {
                   const maxCount = Math.max(...charts.formsByMonth.map(i => i.count));
                   const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
 
                   return (
-                    <div key={index} className="flex items-center group">
-                      <div className="w-24 text-sm text-gray-600">
+                    <div key={index} className="flex items-center group w-full">
+                      <div className="w-20 sm:w-24 text-xs sm:text-sm text-gray-600 flex-shrink-0">
                         {item._id.month}/{item._id.year}
                       </div>
-                      <div className="flex-1 mx-4">
-                        <div className="relative">
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="flex-1 mx-2 sm:mx-4 min-w-0">
+                        <div className="relative w-full">
+                          <div className="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
                             <div
-                              className="bg-primary-600 h-2.5 rounded-full transition-all duration-500 ease-out group-hover:bg-primary-700"
+                              className="bg-primary-600 h-2 sm:h-2.5 rounded-full transition-all duration-500 ease-out group-hover:bg-primary-700"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
                         </div>
                       </div>
-                      <div className="w-16 text-right">
-                        <span className="text-sm font-medium text-gray-900">
+                      <div className="w-12 sm:w-16 text-right flex-shrink-0">
+                        <span className="text-xs sm:text-sm font-medium text-gray-900">
                           {item.count}
                         </span>
                       </div>
@@ -227,18 +230,18 @@ const Dashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="mx-auto h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <FaChartLine className="h-6 w-6 text-gray-400" />
+              <div className="text-center py-8 sm:py-12">
+                <div className="mx-auto h-10 w-10 sm:h-12 sm:w-12 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                  <FaChartLine className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
                 </div>
-                <p className="text-gray-500">No form data available</p>
+                <p className="text-sm sm:text-base text-gray-500">No form data available</p>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-4"
+                  className="mt-3 sm:mt-4 w-full sm:w-auto justify-center"
                   onClick={() => navigate('/admin/forms/new')}
                 >
-                  <FaPlus className="h-4 w-4 mr-2" />
+                  <FaPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Create Your First Form
                 </Button>
               </div>
@@ -247,56 +250,56 @@ const Dashboard = () => {
         </div>
 
         {/* System Overview */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900">System Overview</h3>
+        <div className="card w-full">
+          <div className="card-header p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 break-words">System Overview</h3>
           </div>
-          <div className="card-body">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <FaUsers className="h-5 w-5 text-blue-600" />
+          <div className="card-body p-4 sm:p-6 pt-0 sm:pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg w-full">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FaUsers className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Total Users</p>
-                    <p className="text-xs text-gray-500">Including admins</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">Total Users</p>
+                    <p className="text-xs text-gray-500 truncate">Including admins</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers || 0}</p>
+                <div className="text-right ml-2 flex-shrink-0">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalUsers || 0}</p>
                   <p className="text-xs text-gray-500">Admins: {stats.totalAdmins || 0}</p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <FaClipboardList className="h-5 w-5 text-green-600" />
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg w-full">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FaClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Active Forms</p>
-                    <p className="text-xs text-gray-500">Currently active</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">Active Forms</p>
+                    <p className="text-xs text-gray-500 truncate">Currently active</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalForms || 0}</p>
+                <div className="text-right ml-2 flex-shrink-0">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalForms || 0}</p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <FaFileUpload className="h-5 w-5 text-purple-600" />
+              <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg w-full">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FaFileUpload className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Total Submissions</p>
-                    <p className="text-xs text-gray-500">Across all forms</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">Total Submissions</p>
+                    <p className="text-xs text-gray-500 truncate">Across all forms</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalSubmissions || 0}</p>
-                  <p className="text-xs text-green-600">+{stats.recentSubmissions || 0} this week</p>
+                <div className="text-right ml-2 flex-shrink-0">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.totalSubmissions || 0}</p>
+                  <p className="text-xs text-green-600 truncate">+{stats.recentSubmissions || 0} this week</p>
                 </div>
               </div>
             </div>
@@ -304,59 +307,59 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+      {/* Quick actions - Responsive grid */}
+      <div className="card w-full">
+        <div className="card-header p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 break-words">Quick Actions</h3>
         </div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card-body p-4 sm:p-6 pt-0 sm:pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/admin/forms/new')}
-              className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all group"
+              className="flex flex-col items-center justify-center p-4 sm:p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all group w-full"
             >
-              <div className="h-12 w-12 bg-primary-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-primary-200">
-                <FaPlus className="h-6 w-6 text-primary-600" />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary-100 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary-200">
+                <FaPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary-600" />
               </div>
-              <span className="font-medium text-gray-900 group-hover:text-primary-700">Create Form</span>
-              <span className="text-sm text-gray-500 mt-1">Design a new form</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900 group-hover:text-primary-700 text-center break-words">Create Form</span>
+              <span className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 text-center break-words">Design a new form</span>
             </button>
 
             <button
               onClick={() => navigate('/admin/users')}
-              className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              className="flex flex-col items-center justify-center p-4 sm:p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group w-full"
             >
-              <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-200">
-                <FaUsers className="h-6 w-6 text-blue-600" />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-100 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-blue-200">
+                <FaUsers className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <span className="font-medium text-gray-900 group-hover:text-blue-700">Manage Users</span>
-              <span className="text-sm text-gray-500 mt-1">View and manage users</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900 group-hover:text-blue-700 text-center break-words">Manage Users</span>
+              <span className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 text-center break-words">View and manage users</span>
             </button>
 
             <button
               onClick={() => navigate('/admin/submissions')}
-              className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
+              className="flex flex-col items-center justify-center p-4 sm:p-6 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group w-full"
             >
-              <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-200">
-                <FaDownload className="h-6 w-6 text-purple-600" />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 bg-purple-100 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-purple-200">
+                <FaDownload className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               </div>
-              <span className="font-medium text-gray-900 group-hover:text-purple-700">View Submissions</span>
-              <span className="text-sm text-gray-500 mt-1">Check form responses</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900 group-hover:text-purple-700 text-center break-words">View Submissions</span>
+              <span className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 text-center break-words">Check form responses</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Status bar */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-gray-600">System Status: </span>
-            <span className="text-sm font-medium text-green-600">All systems operational</span>
+      {/* Status bar - Responsive */}
+      <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap">
+            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+            <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">System Status:</span>
+            <span className="text-xs sm:text-sm font-medium text-green-600 whitespace-nowrap">All systems operational</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-xs text-gray-500">
+          <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <span className="text-xs text-gray-500 order-2 xs:order-1 text-center sm:text-left">
               Last updated: {new Date().toLocaleTimeString()}
             </span>
             <Button
@@ -364,6 +367,7 @@ const Dashboard = () => {
               size="sm"
               onClick={fetchDashboardStats}
               icon={FaSync}
+              className="w-full xs:w-auto justify-center order-1 xs:order-2 whitespace-nowrap"
             >
               Refresh
             </Button>
