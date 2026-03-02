@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaSearch, 
   FaClipboardList, 
@@ -7,7 +7,9 @@ import {
   FaCalendar,
   FaFilter,
   FaCheckCircle,
-  FaClock
+  FaClock,
+  FaLock,
+  FaEye
 } from 'react-icons/fa';
 import { formAPI } from '../../api/form.api';
 import Input from '../common/Input';
@@ -16,14 +18,17 @@ import Loader from '../common/Loader';
 import Alert from '../common/Alert';
 import { formatDate } from '../../utils/helpers';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const FormList = () => {
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all, available, closed
+  const [filter, setFilter] = useState('all'); // all, active, closed
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -31,27 +36,27 @@ const FormList = () => {
     totalPages: 1,
   });
 
-  useEffect(() => {
-    fetchForms();
-  }, [pagination.page, search, filter]);
-
-  const fetchForms = async () => {
+  const fetchForms = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
         page: pagination.page,
         limit: pagination.limit,
         search,
-        activeOnly: filter !== 'closed', // Show only active forms unless filter is 'closed'
+        activeOnly: filter !== 'closed',
       };
       
       const response = await formAPI.getForms(params);
       
-      // Filter forms based on user access
+      // Get all forms - no filtering by login requirement
+      // This ensures everyone sees all forms
       let filteredForms = response.data.forms;
+      
+      // Apply local filter based on UI selection
       if (filter === 'available') {
         filteredForms = filteredForms.filter(form => 
-          form.isActive && (!form.settings?.requireLogin || user)
+          form.isActive && (!form.settings?.startDate || new Date(form.settings.startDate) <= new Date()) &&
+          (!form.settings?.endDate || new Date(form.settings.endDate) >= new Date())
         );
       } else if (filter === 'closed') {
         filteredForms = filteredForms.filter(form => !form.isActive);
@@ -69,7 +74,11 @@ const FormList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, search, filter]);
+
+  useEffect(() => {
+    fetchForms();
+  }, [fetchForms]);
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
@@ -85,6 +94,18 @@ const FormList = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  const handleFormClick = (formId, requiresLogin) => {
+    // If form requires login and user is not authenticated
+    if (requiresLogin && !isAuthenticated()) {
+      toast.error('Please login or sign up to fill this form');
+      navigate('/login', { state: { from: { pathname: `/forms/${formId}` } } });
+      return;
+    }
+    
+    // If form requires login and user is authenticated, or form doesn't require login
+    navigate(`/forms/${formId}`);
+  };
+
   const isFormAvailable = (form) => {
     if (!form.isActive) return false;
     
@@ -92,9 +113,6 @@ const FormList = () => {
     const now = new Date();
     if (form.settings?.startDate && new Date(form.settings.startDate) > now) return false;
     if (form.settings?.endDate && new Date(form.settings.endDate) < now) return false;
-    
-    // Check login requirement
-    if (form.settings?.requireLogin && !user) return false;
     
     return true;
   };
@@ -181,6 +199,28 @@ const FormList = () => {
 
       {error && <Alert type="error" title="Error" message={error} />}
 
+      {/* Info banner for non-logged in users */}
+      {!isAuthenticated() && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <FaLock className="text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-blue-700">
+                <span className="font-medium">Note:</span> You can browse all forms, but you'll need to{' '}
+                <Link to="/login" className="font-medium underline hover:text-blue-900">
+                  login
+                </Link>{' '}
+                or{' '}
+                <Link to="/register" className="font-medium underline hover:text-blue-900">
+                  sign up
+                </Link>{' '}
+                to submit them.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Forms grid */}
       {forms.length === 0 ? (
         <div className="text-center py-12">
@@ -204,24 +244,34 @@ const FormList = () => {
             {forms.map((form) => {
               const status = getFormStatus(form);
               const isAvailable = isFormAvailable(form);
+              const requiresLogin = form.settings?.requireLogin !== false; // Default to true if not specified
               
               return (
                 <div 
                   key={form._id} 
-                  className={`card hover:shadow-lg transition-shadow ${
+                  className={`card hover:shadow-lg transition-shadow cursor-pointer ${
                     !isAvailable ? 'opacity-75' : ''
                   }`}
+                  onClick={() => isAvailable && handleFormClick(form._id, requiresLogin)}
                 >
                   <div className="card-body">
                     <div className="flex items-start justify-between">
                       <div className="h-12 w-12 bg-primary-100 rounded-lg flex items-center justify-center">
                         <FaClipboardList className="h-6 w-6 text-primary-600" />
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                        {status.label === 'Open' && <FaCheckCircle className="mr-1 h-3 w-3" />}
-                        {status.label === 'Scheduled' && <FaClock className="mr-1 h-3 w-3" />}
-                        {status.label}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                          {status.label === 'Open' && <FaCheckCircle className="mr-1 h-3 w-3" />}
+                          {status.label === 'Scheduled' && <FaClock className="mr-1 h-3 w-3" />}
+                          {status.label}
+                        </span>
+                        {requiresLogin && !isAuthenticated() && isAvailable && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            <FaLock className="mr-1 h-3 w-3" />
+                            Login
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     <h3 className="mt-4 text-lg font-medium text-gray-900">
@@ -235,13 +285,6 @@ const FormList = () => {
                     )}
                     
                     <div className="mt-4 space-y-2">
-                      {form.settings?.requireLogin && !user && (
-                        <div className="flex items-center text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                          <FaUser className="mr-1 h-3 w-3" />
-                          Login required to submit
-                        </div>
-                      )}
-                      
                       {form.settings?.startDate && (
                         <div className="flex items-center text-xs text-gray-500">
                           <FaCalendar className="mr-1 h-3 w-3" />
@@ -270,11 +313,29 @@ const FormList = () => {
                     
                     <div className="mt-6">
                       {isAvailable ? (
-                        <Link to={`/forms/${form._id}`}>
-                          <Button variant="primary" className="w-full">
-                            Fill Form
-                          </Button>
-                        </Link>
+                        <button
+                          className={`w-full flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            requiresLogin && !isAuthenticated()
+                              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              : 'bg-primary-600 text-white hover:bg-primary-700'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFormClick(form._id, requiresLogin);
+                          }}
+                        >
+                          {requiresLogin && !isAuthenticated() ? (
+                            <>
+                              <FaLock className="mr-2 h-4 w-4" />
+                              Login to Fill
+                            </>
+                          ) : (
+                            <>
+                              <FaEye className="mr-2 h-4 w-4" />
+                              Fill Form
+                            </>
+                          )}
+                        </button>
                       ) : (
                         <Button 
                           variant="outline" 
@@ -340,32 +401,6 @@ const FormList = () => {
             </div>
           )}
         </>
-      )}
-
-      {/* Information for users */}
-      {!user && (
-        <div className="card bg-blue-50 border-blue-200">
-          <div className="card-body">
-            <div className="flex items-start">
-              <FaUser className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
-              <div>
-                <h3 className="text-sm font-medium text-blue-800">
-                  Some forms require login
-                </h3>
-                <p className="mt-1 text-sm text-blue-700">
-                  <Link to="/login" className="font-medium underline hover:text-blue-900">
-                    Sign in
-                  </Link>{' '}
-                  or{' '}
-                  <Link to="/register" className="font-medium underline hover:text-blue-900">
-                    create an account
-                  </Link>{' '}
-                  to access all available forms.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

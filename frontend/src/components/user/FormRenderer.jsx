@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaLock } from 'react-icons/fa';
 import { formAPI } from '../../api/form.api';
 import { submissionAPI } from '../../api/submission.api';
 import DynamicForm from '../dynamic-form/DynamicForm';
 import Loader from '../common/Loader';
 import Alert from '../common/Alert';
 import Button from '../common/Button';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const FormRenderer = () => {
   const { formId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   
   const [form, setForm] = useState(null);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [requiresLogin, setRequiresLogin] = useState(false);
 
   const fetchForm = useCallback(async () => {
     try {
@@ -25,6 +28,13 @@ const FormRenderer = () => {
       const response = await formAPI.getFormById(formId);
       setForm(response.data.form);
       setFields(response.data.fields);
+      setRequiresLogin(response.data.form.settings?.requireLogin !== false);
+      
+      // Check if login is required but user is not authenticated
+      if (response.data.form.settings?.requireLogin && !isAuthenticated()) {
+        setError('Please login to fill this form');
+      }
+      
       setError(null);
     } catch (err) {
       setError('Failed to load form');
@@ -32,13 +42,20 @@ const FormRenderer = () => {
     } finally {
       setLoading(false);
     }
-  }, [formId]);
+  }, [formId, isAuthenticated]);
 
   useEffect(() => {
     fetchForm();
   }, [fetchForm]);
 
   const handleSubmit = async (formData) => {
+    // Double-check authentication for forms that require login
+    if (requiresLogin && !isAuthenticated()) {
+      toast.error('Please login to submit this form');
+      navigate('/login', { state: { from: { pathname: `/forms/${formId}` } } });
+      return;
+    }
+
     try {
       // Extract files from formData
       const files = [];
@@ -47,7 +64,7 @@ const FormRenderer = () => {
       fields.forEach(field => {
         if (field.fieldType === 'file' && formData[field.name] instanceof File) {
           files.push(formData[field.name]);
-          dataToSend[field.name] = formData[field.name].name; // Store filename
+          dataToSend[field.name] = formData[field.name].name;
         }
       });
 
@@ -55,8 +72,12 @@ const FormRenderer = () => {
       setSubmitted(true);
       toast.success('Form submitted successfully!');
     } catch (err) {
-      toast.error('Failed to submit form');
+      toast.error(err.response?.data?.message || 'Failed to submit form');
     }
+  };
+
+  const handleLoginRedirect = () => {
+    navigate('/login', { state: { from: { pathname: `/forms/${formId}` } } });
   };
 
   if (loading) {
@@ -71,14 +92,23 @@ const FormRenderer = () => {
     return (
       <div className="max-w-3xl mx-auto">
         <Alert type="error" title="Error" message={error} />
-        <div className="mt-4">
+        <div className="mt-4 flex space-x-4">
           <Button
             variant="outline"
             icon={FaArrowLeft}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/forms')}
           >
-            Go Back
+            Back to Forms
           </Button>
+          {error.includes('login') && (
+            <Button
+              variant="primary"
+              icon={FaLock}
+              onClick={handleLoginRedirect}
+            >
+              Go to Login
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -122,28 +152,42 @@ const FormRenderer = () => {
         <Button
           variant="outline"
           icon={FaArrowLeft}
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/forms')}
           className="mb-6"
         >
           Back to Forms
         </Button>
         
+        {requiresLogin && !isAuthenticated() && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center">
+              <FaLock className="text-yellow-500 mr-3" />
+              <p className="text-sm text-yellow-700">
+                This form requires login. Please{' '}
+                <button
+                  onClick={handleLoginRedirect}
+                  className="font-medium underline hover:text-yellow-900"
+                >
+                  sign in
+                </button>{' '}
+                to submit.
+              </p>
+            </div>
+          </div>
+        )}
+        
         <DynamicForm
           form={form}
           fields={fields}
           onSubmit={handleSubmit}
-          submitButtonText="Submit Form"
+          submitButtonText={requiresLogin && !isAuthenticated() ? 'Login to Submit' : 'Submit Form'}
+          disabled={requiresLogin && !isAuthenticated()}
         />
         
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>
             This form was created by {form.createdBy?.firstName} {form.createdBy?.lastName}
           </p>
-          {form.settings?.requireLogin && (
-            <p className="mt-1">
-              Login is required to submit this form
-            </p>
-          )}
         </div>
       </div>
     </div>
