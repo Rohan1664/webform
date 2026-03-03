@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
@@ -17,6 +17,8 @@ const Register = () => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -105,6 +107,14 @@ const Register = () => {
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
@@ -170,32 +180,54 @@ const Register = () => {
                 autoComplete="email"
               />
               
-              <Input
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-                icon={FaLock}
-                placeholder="••••••••"
-                required
-                helperText="Minimum 6 characters with uppercase, lowercase, and number"
-                autoComplete="new-password"
-              />
+              {/* Password field with show/hide */}
+              <div className="relative">
+                <Input
+                  label="Password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  icon={FaLock}
+                  placeholder="••••••••"
+                  required
+                  helperText="Minimum 6 characters with uppercase, lowercase, and number"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700 focus:outline-none"
+                  tabIndex="-1"
+                >
+                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
+              </div>
               
-              <Input
-                label="Confirm password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                error={errors.confirmPassword}
-                icon={FaLock}
-                placeholder="••••••••"
-                required
-                autoComplete="new-password"
-              />
+              {/* Confirm Password field with show/hide */}
+              <div className="relative">
+                <Input
+                  label="Confirm password"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  error={errors.confirmPassword}
+                  icon={FaLock}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
+                  className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700 focus:outline-none"
+                  tabIndex="-1"
+                >
+                  {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
+              </div>
               
               {/* Terms */}
               <div className="flex items-start space-x-2">
