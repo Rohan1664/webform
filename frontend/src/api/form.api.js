@@ -50,11 +50,10 @@ export const formAPI = {
         status: error.response?.status
       });
       
-      throw new Error(
-        error.response?.data?.message || 
-        error.message || 
-        'Failed to fetch form'
-      );
+      // Throw a more specific error message
+      const errorMessage = error.response?.data?.message || 
+                          (error.response?.status === 404 ? 'Form not found' : 'Failed to fetch form');
+      throw new Error(errorMessage);
     }
   },
 
@@ -114,7 +113,7 @@ export const formAPI = {
     }
   },
 
-  // Toggle form status (admin only) - NEW METHOD
+  // Toggle form status (admin only)
   toggleFormStatus: async (formId) => {
     try {
       console.log(`🔍 FormAPI.toggleFormStatus called for ID: ${formId}`);
@@ -142,7 +141,7 @@ export const formAPI = {
     }
   },
 
-  // Delete form (admin only)
+  // Delete form (admin only) - PERMANENT DELETE
   deleteForm: async (formId) => {
     try {
       console.log(`🔍 FormAPI.deleteForm called for ID: ${formId}`);

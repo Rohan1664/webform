@@ -8,7 +8,7 @@ exports.createForm = async (req, res) => {
   try {
     await connectDB();
     
-    const { title, description, settings, fields } = req.body;
+    const { title, description, settings, fields, appearance } = req.body;
     
     // Validate required fields
     if (!title || !title.trim()) {
@@ -24,6 +24,7 @@ exports.createForm = async (req, res) => {
       description: description?.trim(),
       createdBy: req.user.userId,
       settings: settings || {},
+      appearance: appearance || {},
       isActive: true
     });
     
@@ -39,6 +40,8 @@ exports.createForm = async (req, res) => {
         placeholder: field.placeholder?.trim(),
         options: field.options || [],
         validation: field.validation || {},
+        layout: field.layout || { width: 'full' },
+        helpText: field.helpText || '',
         order: field.order || index,
         isActive: true
       }));
@@ -113,10 +116,18 @@ exports.getAllForms = async (req, res) => {
     
     console.log(`Found ${forms.length} forms`);
     
+    // Convert to objects and add virtual fields
+    const formsWithVirtuals = forms.map(form => {
+      const formObj = form.toObject();
+      formObj.hasReachedSubmissionLimit = form.hasReachedSubmissionLimit;
+      formObj.remainingSubmissions = form.remainingSubmissions;
+      return formObj;
+    });
+    
     res.json({
       success: true,
       data: {
-        forms,
+        forms: formsWithVirtuals,
         pagination: {
           page: pageInt,
           limit: limitInt,
@@ -138,22 +149,29 @@ exports.getAllForms = async (req, res) => {
   }
 };
 
-// Get single form by ID
+// Get single form by ID - Allow admins to view inactive forms
 exports.getFormById = async (req, res) => {
   try {
     await connectDB();
     
     const { formId } = req.params;
     
-    const form = await Form.findOne({ 
-      _id: formId,
-      isActive: true 
-    }).populate('createdBy', 'firstName lastName email');
+    // For admin users, allow viewing inactive forms
+    // For regular users, only show active forms
+    let query = { _id: formId };
+    
+    // If user is not admin, only show active forms
+    if (!req.user || req.user.role !== 'admin') {
+      query.isActive = true;
+    }
+    
+    const form = await Form.findOne(query)
+      .populate('createdBy', 'firstName lastName email');
     
     if (!form) {
       return res.status(404).json({
         success: false,
-        message: 'Form not found or inactive'
+        message: 'Form not found'
       });
     }
     
@@ -180,15 +198,21 @@ exports.getFormById = async (req, res) => {
   }
 };
 
-// Update form (admin only) - FIXED to handle isActive
+// Update form (admin only) - FIXED with detailed error handling
 exports.updateForm = async (req, res) => {
   try {
     await connectDB();
     
     const { formId } = req.params;
-    const { title, description, settings, fields, isActive } = req.body;
+    const { title, description, settings, fields, isActive, appearance } = req.body;
     
-    console.log('Updating form:', { formId, isActive, title }); // Debug log
+    console.log('========================================');
+    console.log('UPDATE FORM REQUEST RECEIVED');
+    console.log('Form ID:', formId);
+    console.log('Title:', title);
+    console.log('isActive:', isActive);
+    console.log('Fields count:', fields?.length || 0);
+    console.log('========================================');
     
     // Check if form exists and belongs to admin
     const form = await Form.findOne({ 
@@ -197,75 +221,125 @@ exports.updateForm = async (req, res) => {
     });
     
     if (!form) {
+      console.log('Form not found or unauthorized');
       return res.status(404).json({
         success: false,
         message: 'Form not found or unauthorized'
       });
     }
     
+    console.log('Form found, proceeding with update...');
+    
     // Update form fields if provided
-    if (title !== undefined) form.title = title.trim();
-    if (description !== undefined) form.description = description?.trim();
-    if (settings) form.settings = { ...form.settings, ...settings };
-    if (isActive !== undefined) form.isActive = isActive; // ✅ Handle isActive toggle
+    if (title !== undefined) {
+      console.log('Updating title to:', title);
+      form.title = title.trim();
+    }
+    if (description !== undefined) {
+      console.log('Updating description');
+      form.description = description?.trim();
+    }
+    if (settings) {
+      console.log('Updating settings');
+      form.settings = { ...form.settings, ...settings };
+    }
+    if (appearance) {
+      console.log('Updating appearance');
+      form.appearance = { ...form.appearance, ...appearance };
+    }
+    if (isActive !== undefined) {
+      console.log('Updating isActive to:', isActive);
+      form.isActive = isActive;
+    }
     
     await form.save();
+    console.log('Form saved successfully');
     
-    // Update fields if provided (for full form edit)
-    if (fields && Array.isArray(fields) && fields.length > 0) {
-      // First, deactivate all existing fields
+    // Update fields if provided
+    if (fields && Array.isArray(fields)) {
+      console.log(`Processing ${fields.length} fields...`);
+      
+      // Get existing fields to check what needs to be updated
+      const existingFields = await FormField.find({ formId: form._id });
+      console.log(`Found ${existingFields.length} existing fields`);
+      
+      // Deactivate all existing fields first (we'll reactivate the ones we keep)
       await FormField.updateMany(
         { formId: form._id },
         { isActive: false }
       );
+      console.log('Deactivated all existing fields');
       
-      // Create/update fields
+      // Process each field from the request
       const fieldPromises = fields.map(async (field, index) => {
-        if (field._id) {
-          // Update existing field
-          return FormField.findOneAndUpdate(
-            { 
-              _id: field._id,
-              formId: form._id 
-            },
-            {
-              label: field.label?.trim(),
-              fieldType: field.fieldType,
-              name: field.name?.trim(),
-              placeholder: field.placeholder?.trim(),
-              options: field.options || [],
-              validation: field.validation || {},
-              order: field.order || index,
-              isActive: true
-            },
-            { new: true, upsert: false }
-          );
-        } else {
-          // Create new field
-          const newField = new FormField({
-            formId: form._id,
+        try {
+          console.log(`Processing field ${index}:`, field.name);
+          
+          const fieldData = {
             label: field.label?.trim(),
             fieldType: field.fieldType,
             name: field.name?.trim(),
             placeholder: field.placeholder?.trim(),
             options: field.options || [],
             validation: field.validation || {},
-            order: field.order || index,
+            layout: field.layout || { width: 'full' },
+            helpText: field.helpText || '',
+            order: index,
             isActive: true
-          });
-          return newField.save();
+          };
+          
+          // Check if this field has a valid MongoDB ID (not a temporary one)
+          if (field._id && field._id.match(/^[0-9a-fA-F]{24}$/)) {
+            // This is a real MongoDB ID, try to update existing field
+            console.log(`Updating existing field with ID: ${field._id}`);
+            const updated = await FormField.findByIdAndUpdate(
+              field._id,
+              fieldData,
+              { new: true }
+            );
+            if (updated) {
+              console.log(`Field ${field._id} updated successfully`);
+              return updated;
+            } else {
+              console.log(`Field ${field._id} not found, creating new one`);
+              // If field not found, create new
+              const newField = new FormField({
+                formId: form._id,
+                ...fieldData
+              });
+              return await newField.save();
+            }
+          } else {
+            // This is a temporary ID or no ID, create new field
+            console.log('Creating new field');
+            const newField = new FormField({
+              formId: form._id,
+              ...fieldData
+            });
+            return await newField.save();
+          }
+        } catch (fieldError) {
+          console.error(`Error processing field ${index}:`, fieldError);
+          // Don't throw here, continue with other fields
+          return null;
         }
       });
       
-      await Promise.all(fieldPromises);
+      const savedFields = await Promise.all(fieldPromises);
+      console.log(`Successfully saved ${savedFields.filter(f => f).length} fields`);
     }
     
     // Fetch updated form with fields
     const updatedForm = await Form.findById(form._id)
       .populate('createdBy', 'firstName lastName email');
     
-    const updatedFields = await FormField.find({ formId: form._id })
-      .sort('order');
+    const updatedFields = await FormField.find({ 
+      formId: form._id,
+      isActive: true 
+    }).sort('order');
+    
+    console.log('Update completed successfully');
+    console.log(`Returning ${updatedFields.length} active fields`);
     
     res.json({
       success: true,
@@ -277,16 +351,23 @@ exports.updateForm = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Update form error:', error);
+    console.error('========================================');
+    console.error('UPDATE FORM ERROR:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('========================================');
+    
     res.status(500).json({
       success: false,
       message: 'Error updating form',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      errorDetails: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
 
-// Toggle form status (admin only) - NEW DEDICATED ENDPOINT
+// Toggle form status (admin only)
 exports.toggleFormStatus = async (req, res) => {
   try {
     await connectDB();
@@ -333,13 +414,14 @@ exports.toggleFormStatus = async (req, res) => {
   }
 };
 
-// Delete form (admin only)
+// Delete form (admin only) - HARD DELETE for permanent deletion
 exports.deleteForm = async (req, res) => {
   try {
     await connectDB();
     
     const { formId } = req.params;
     
+    // Check if form exists and belongs to admin
     const form = await Form.findOne({ 
       _id: formId,
       createdBy: req.user.userId 
@@ -352,19 +434,16 @@ exports.deleteForm = async (req, res) => {
       });
     }
     
-    // Soft delete - set isActive to false
-    form.isActive = false;
-    await form.save();
+    // HARD DELETE - permanently remove from database
+    await Form.findByIdAndDelete(formId);
     
-    // Also deactivate all fields
-    await FormField.updateMany(
-      { formId: form._id },
-      { isActive: false }
-    );
+    // Also delete all associated fields and submissions
+    await FormField.deleteMany({ formId: formId });
+    await FormSubmission.deleteMany({ formId: formId });
     
     res.json({
       success: true,
-      message: 'Form deleted successfully'
+      message: 'Form permanently deleted successfully'
     });
     
   } catch (error) {

@@ -10,9 +10,11 @@ import {
   FaToggleOn,
   FaToggleOff,
   FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaSync
 } from 'react-icons/fa';
 import { formAPI } from '../../api/form.api';
+import { submissionAPI } from '../../api/submission.api';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Loader from '../common/Loader';
@@ -23,6 +25,7 @@ import toast from 'react-hot-toast';
 const FormsList = () => {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -35,9 +38,70 @@ const FormsList = () => {
     totalPages: 1,
   });
 
-  const fetchForms = useCallback(async () => {
+  // Function to get submission limit status
+  const getSubmissionLimitStatus = (form) => {
+    if (!form.settings?.submissionLimit || form.settings.submissionLimit === 0) {
+      return null; // Unlimited
+    }
+    
+    const total = form.stats?.totalSubmissions || 0;
+    const limit = form.settings.submissionLimit;
+    
+    if (total >= limit) {
+      return {
+        text: 'Limit reached',
+        color: 'text-red-600',
+        bg: 'bg-red-50',
+        progress: 100
+      };
+    }
+    
+    const percentage = Math.round((total / limit) * 100);
+    return {
+      text: `${total}/${limit}`,
+      color: percentage > 80 ? 'text-yellow-600' : 'text-green-600',
+      bg: percentage > 80 ? 'bg-yellow-50' : 'bg-green-50',
+      progress: percentage
+    };
+  };
+
+  // Function to fetch submission counts for all forms
+  const fetchSubmissionCounts = async (formsData) => {
     try {
-      setLoading(true);
+      const formsWithStats = await Promise.all(
+        formsData.map(async (form) => {
+          try {
+            // Fetch submissions for this form to get count
+            const submissionsResponse = await submissionAPI.getFormSubmissions(form._id, { limit: 1 });
+            return {
+              ...form,
+              stats: {
+                ...form.stats,
+                totalSubmissions: submissionsResponse.data.pagination?.totalSubmissions || 0,
+                lastSubmissionAt: submissionsResponse.data.submissions?.[0]?.submittedAt || null
+              }
+            };
+          } catch (err) {
+            console.error(`Error fetching submissions for form ${form._id}:`, err);
+            return form;
+          }
+        })
+      );
+      return formsWithStats;
+    } catch (err) {
+      console.error('Error fetching submission counts:', err);
+      return formsData;
+    }
+  };
+
+  const fetchForms = useCallback(async (showRefreshing = false) => {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const params = {
         page: pagination.page,
         limit: pagination.limit,
@@ -46,7 +110,13 @@ const FormsList = () => {
       };
       
       const response = await formAPI.getForms(params);
-      setForms(response.data.forms);
+      
+      console.log('Fetched forms:', response.data.forms); // Debug log
+      
+      // Fetch latest submission counts for each form
+      const formsWithUpdatedStats = await fetchSubmissionCounts(response.data.forms);
+      
+      setForms(formsWithUpdatedStats);
       setPagination(response.data.pagination);
       setError(null);
     } catch (err) {
@@ -54,6 +124,7 @@ const FormsList = () => {
       console.error('Error fetching forms:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [pagination.page, pagination.limit, search, filter]);
 
@@ -61,21 +132,37 @@ const FormsList = () => {
     fetchForms();
   }, [fetchForms]);
 
-  const handleDeleteForm = async (formId, formTitle) => {
-    if (!window.confirm(`Are you sure you want to delete the form "${formTitle}"? This action cannot be undone.`)) {
+  const handleRefresh = async () => {
+    await fetchForms(true);
+    toast.success('Forms refreshed');
+  };
+
+  const handleDeleteForm = async (formId, formTitle, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Delete button clicked for form:', formId, formTitle); // Debug log
+    
+    if (!window.confirm(`Are you sure you want to permanently delete the form "${formTitle}"? This action cannot be undone. All submissions for this form will also be deleted.`)) {
       return;
     }
 
     try {
       await formAPI.deleteForm(formId);
-      toast.success('Form deleted successfully');
+      toast.success('Form permanently deleted successfully');
       fetchForms();
     } catch (err) {
+      console.error('Delete error:', err);
       toast.error(err.response?.data?.message || 'Failed to delete form');
     }
   };
 
-  const handleToggleStatus = async (formId, currentStatus) => {
+  const handleToggleStatus = async (formId, currentStatus, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Toggle button clicked for form:', formId, 'Current status:', currentStatus); // Debug log
+    
     try {
       await formAPI.toggleFormStatus(formId);
       
@@ -85,6 +172,20 @@ const FormsList = () => {
       console.error('Toggle error:', err);
       toast.error(err.response?.data?.message || 'Failed to update form status');
     }
+  };
+
+  const handleEditClick = (formId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Edit clicked for form:', formId); // Debug log
+    window.location.href = `/admin/forms/edit/${formId}`;
+  };
+
+  const handleViewSubmissions = (formId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('View submissions clicked for form:', formId); // Debug log
+    window.location.href = `/admin/submissions/${formId}`;
   };
 
   const handlePageChange = (newPage) => {
@@ -103,7 +204,11 @@ const FormsList = () => {
     setShowMobileFilters(false);
   };
 
-  const toggleRowExpansion = (formId) => {
+  const toggleRowExpansion = (formId, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setExpandedRows(prev => ({
       ...prev,
       [formId]: !prev[formId]
@@ -128,11 +233,22 @@ const FormsList = () => {
             Create and manage all your forms
           </p>
         </div>
-        <Link to="/admin/forms/new" className="w-full sm:w-auto">
-          <Button variant="primary" icon={FaPlus} className="w-full sm:w-auto justify-center">
-            Create New Form
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            icon={FaSync}
+            onClick={handleRefresh}
+            loading={refreshing}
+            className="flex-1 sm:flex-none justify-center"
+          >
+            Refresh
           </Button>
-        </Link>
+          <Link to="/admin/forms/new" className="flex-1 sm:flex-none">
+            <Button variant="primary" icon={FaPlus} className="w-full justify-center">
+              Create New
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search and filters - Mobile optimized */}
@@ -234,98 +350,127 @@ const FormsList = () => {
                   </td>
                 </tr>
               ) : (
-                forms.map((form) => (
-                  <tr key={form._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <FaClipboardList className="h-5 w-5 text-primary-600" />
-                        </div>
-                        <div className="ml-4 min-w-0 max-w-xs">
-                          <div className="font-medium text-gray-900 truncate">
-                            {form.title}
+                forms.map((form) => {
+                  const limitStatus = getSubmissionLimitStatus(form);
+                  
+                  return (
+                    <tr key={form._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FaClipboardList className="h-5 w-5 text-primary-600" />
                           </div>
-                          {form.description && (
-                            <div className="text-sm text-gray-500 truncate">
-                              {form.description}
+                          <div className="ml-4 min-w-0 max-w-xs">
+                            <div className="font-medium text-gray-900 truncate">
+                              {form.title}
                             </div>
-                          )}
+                            {form.description && (
+                              <div className="text-sm text-gray-500 truncate">
+                                {form.description}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        form.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {form.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-900">
-                          {form.stats?.totalSubmissions || 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          form.isActive 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {form.isActive ? 'Active' : 'Inactive'}
                         </span>
-                        <span className="text-gray-500 ml-1">total</span>
-                      </div>
-                      {form.stats?.lastSubmissionAt && (
-                        <div className="text-xs text-gray-500">
-                          Last: {formatDate(form.stats.lastSubmissionAt, 'MMM DD')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-900">
+                            {form.stats?.totalSubmissions || 0}
+                          </span>
+                          <span className="text-gray-500 ml-1">total</span>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(form.createdAt, 'MMM DD, YYYY')}
-                      </div>
-                      <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                        by {form.createdBy?.firstName} {form.createdBy?.lastName}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1">
-                        <button
-                          onClick={() => handleToggleStatus(form._id, form.isActive)}
-                          className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-                          title={form.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {form.isActive ? (
-                            <FaToggleOn className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <FaToggleOff className="h-5 w-5 text-gray-400" />
-                          )}
-                        </button>
                         
-                        <Link to={`/admin/forms/edit/${form._id}`}>
+                        {/* Submission limit indicator */}
+                        {form.settings?.submissionLimit > 0 && limitStatus && (
+                          <div className="mt-1">
+                            <div className="flex items-center text-xs">
+                              <span className={`font-medium ${limitStatus.color}`}>
+                                {limitStatus.text}
+                              </span>
+                              <span className="text-gray-500 ml-1">limit</span>
+                            </div>
+                            <div className="w-24 h-1.5 bg-gray-200 rounded-full mt-1">
+                              <div 
+                                className={`h-1.5 rounded-full ${
+                                  (form.stats?.totalSubmissions || 0) >= form.settings.submissionLimit
+                                    ? 'bg-red-500'
+                                    : (form.stats?.totalSubmissions || 0) / form.settings.submissionLimit > 0.8
+                                      ? 'bg-yellow-500'
+                                      : 'bg-green-500'
+                                }`}
+                                style={{ 
+                                  width: `${Math.min(100, ((form.stats?.totalSubmissions || 0) / form.settings.submissionLimit) * 100)}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {form.stats?.lastSubmissionAt && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Last: {formatDate(form.stats.lastSubmissionAt, 'MMM DD')}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {formatDate(form.createdAt, 'MMM DD, YYYY')}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate max-w-[120px]">
+                          by {form.createdBy?.firstName} {form.createdBy?.lastName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-1">
                           <button
+                            onClick={(e) => handleToggleStatus(form._id, form.isActive, e)}
+                            className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+                            title={form.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {form.isActive ? (
+                              <FaToggleOn className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <FaToggleOff className="h-5 w-5 text-gray-400" />
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={(e) => handleEditClick(form._id, e)}
                             className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
                             title="Edit Form"
                           >
                             <FaEdit className="h-4 w-4" />
                           </button>
-                        </Link>
-                        
-                        <Link to={`/admin/submissions/${form._id}`}>
+                          
                           <button
+                            onClick={(e) => handleViewSubmissions(form._id, e)}
                             className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50 transition-colors"
                             title="View Submissions"
                           >
                             <FaEye className="h-4 w-4" />
                           </button>
-                        </Link>
-                        
-                        <button
-                          onClick={() => handleDeleteForm(form._id, form.title)}
-                          className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
-                          title="Delete Form"
-                        >
-                          <FaTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          
+                          <button
+                            onClick={(e) => handleDeleteForm(form._id, form.title, e)}
+                            className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Permanently Delete Form"
+                          >
+                            <FaTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -410,111 +555,145 @@ const FormsList = () => {
             </div>
           </div>
         ) : (
-          forms.map((form) => (
-            <div key={form._id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4">
-                {/* Header with title and status */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center min-w-0 flex-1">
-                    <div className="h-10 w-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FaClipboardList className="h-5 w-5 text-primary-600" />
-                    </div>
-                    <div className="ml-3 min-w-0 flex-1">
-                      <h3 className="font-medium text-gray-900 truncate">{form.title}</h3>
-                      {form.description && (
-                        <p className="text-xs text-gray-500 truncate">{form.description}</p>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                    form.isActive 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {form.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-
-                {/* Quick stats */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <span className="text-xs text-gray-500 block">Submissions</span>
-                    <p className="text-sm font-medium text-gray-900">{form.stats?.totalSubmissions || 0}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <span className="text-xs text-gray-500 block">Created</span>
-                    <p className="text-sm font-medium text-gray-900">{formatDate(form.createdAt, 'MMM DD')}</p>
-                  </div>
-                </div>
-
-                {/* Expandable details */}
-                <button
-                  onClick={() => toggleRowExpansion(form._id)}
-                  className="w-full flex items-center justify-between text-xs text-gray-500 mb-2 hover:text-gray-700 transition-colors"
-                >
-                  <span>{expandedRows[form._id] ? 'Hide details' : 'Show details'}</span>
-                  {expandedRows[form._id] ? <FaChevronUp className="h-3 w-3" /> : <FaChevronDown className="h-3 w-3" />}
-                </button>
-
-                {expandedRows[form._id] && (
-                  <div className="mb-3 p-2 bg-gray-50 rounded-lg space-y-1">
-                    {form.stats?.lastSubmissionAt && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">Last submission:</span>
-                        <span className="text-gray-900 font-medium">{formatDate(form.stats.lastSubmissionAt, 'MMM DD')}</span>
+          forms.map((form) => {
+            const limitStatus = getSubmissionLimitStatus(form);
+            
+            return (
+              <div key={form._id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-4">
+                  {/* Header with title and status */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <div className="h-10 w-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FaClipboardList className="h-5 w-5 text-primary-600" />
                       </div>
-                    )}
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Created by:</span>
-                      <span className="text-gray-900 font-medium truncate ml-2">
-                        {form.createdBy?.firstName} {form.createdBy?.lastName}
-                      </span>
+                      <div className="ml-3 min-w-0 flex-1">
+                        <h3 className="font-medium text-gray-900 truncate">{form.title}</h3>
+                        {form.description && (
+                          <p className="text-xs text-gray-500 truncate">{form.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                      form.isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {form.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+
+                  {/* Quick stats */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <span className="text-xs text-gray-500 block">Submissions</span>
+                      <p className="text-sm font-medium text-gray-900">{form.stats?.totalSubmissions || 0}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-2">
+                      <span className="text-xs text-gray-500 block">Created</span>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(form.createdAt, 'MMM DD')}</p>
                     </div>
                   </div>
-                )}
 
-                {/* Action buttons */}
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  {/* Submission limit indicator for mobile */}
+                  {form.settings?.submissionLimit > 0 && limitStatus && (
+                    <div className="mt-2 mb-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Submission limit:</span>
+                        <span className={`font-medium ${limitStatus.color}`}>
+                          {limitStatus.text}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1">
+                        <div 
+                          className={`h-1.5 rounded-full ${
+                            (form.stats?.totalSubmissions || 0) >= form.settings.submissionLimit
+                              ? 'bg-red-500'
+                              : (form.stats?.totalSubmissions || 0) / form.settings.submissionLimit > 0.8
+                                ? 'bg-yellow-500'
+                                : 'bg-green-500'
+                          }`}
+                          style={{ 
+                            width: `${Math.min(100, ((form.stats?.totalSubmissions || 0) / form.settings.submissionLimit) * 100)}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Expandable details */}
                   <button
-                    onClick={() => handleToggleStatus(form._id, form.isActive)}
-                    className={`inline-flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
-                      form.isActive 
-                        ? 'text-green-600 hover:bg-green-50' 
-                        : 'text-gray-400 hover:bg-gray-50'
-                    }`}
+                    onClick={(e) => toggleRowExpansion(form._id, e)}
+                    className="w-full flex items-center justify-between text-xs text-gray-500 mb-2 hover:text-gray-700 transition-colors"
                   >
-                    {form.isActive ? (
-                      <FaToggleOn className="h-5 w-5" />
-                    ) : (
-                      <FaToggleOff className="h-5 w-5" />
-                    )}
-                    <span className="text-xs font-medium">{form.isActive ? 'Active' : 'Inactive'}</span>
+                    <span>{expandedRows[form._id] ? 'Hide details' : 'Show details'}</span>
+                    {expandedRows[form._id] ? <FaChevronUp className="h-3 w-3" /> : <FaChevronDown className="h-3 w-3" />}
                   </button>
 
-                  <div className="flex items-center space-x-1">
-                    <Link to={`/admin/forms/edit/${form._id}`}>
-                      <button className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors">
+                  {expandedRows[form._id] && (
+                    <div className="mb-3 p-2 bg-gray-50 rounded-lg space-y-1">
+                      {form.stats?.lastSubmissionAt && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">Last submission:</span>
+                          <span className="text-gray-900 font-medium">{formatDate(form.stats.lastSubmissionAt, 'MMM DD')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Created by:</span>
+                        <span className="text-gray-900 font-medium truncate ml-2">
+                          {form.createdBy?.firstName} {form.createdBy?.lastName}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <button
+                      onClick={(e) => handleToggleStatus(form._id, form.isActive, e)}
+                      className={`inline-flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                        form.isActive 
+                          ? 'text-green-600 hover:bg-green-50' 
+                          : 'text-gray-400 hover:bg-gray-50'
+                      }`}
+                    >
+                      {form.isActive ? (
+                        <FaToggleOn className="h-5 w-5" />
+                      ) : (
+                        <FaToggleOff className="h-5 w-5" />
+                      )}
+                      <span className="text-xs font-medium">{form.isActive ? 'Active' : 'Inactive'}</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={(e) => handleEditClick(form._id, e)}
+                        className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                        title="Edit Form"
+                      >
                         <FaEdit className="h-4 w-4" />
                       </button>
-                    </Link>
-                    
-                    <Link to={`/admin/submissions/${form._id}`}>
-                      <button className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50 transition-colors">
+                      
+                      <button
+                        onClick={(e) => handleViewSubmissions(form._id, e)}
+                        className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50 transition-colors"
+                      >
                         <FaEye className="h-4 w-4" />
                       </button>
-                    </Link>
-                    
-                    <button
-                      onClick={() => handleDeleteForm(form._id, form.title)}
-                      className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      <FaTrash className="h-4 w-4" />
-                    </button>
+                      
+                      <button
+                        onClick={(e) => handleDeleteForm(form._id, form.title, e)}
+                        className="p-2 text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 transition-colors"
+                        title="Permanently Delete Form"
+                      >
+                        <FaTrash className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
 
         {/* Mobile Pagination */}

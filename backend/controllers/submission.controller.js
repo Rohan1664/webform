@@ -25,6 +25,15 @@ exports.submitForm = async (req, res) => {
       });
     }
     
+    // Check if form has reached submission limit
+    if (form.settings.submissionLimit > 0 && 
+        form.stats.totalSubmissions >= form.settings.submissionLimit) {
+      return res.status(400).json({
+        success: false,
+        message: 'This form has reached its maximum submission limit and is no longer accepting responses.'
+      });
+    }
+    
     // Check if login is required
     if (form.settings.requireLogin && !req.user) {
       return res.status(401).json({
@@ -163,12 +172,26 @@ exports.submitForm = async (req, res) => {
     
     await submission.save();
     
+    // Update form stats
+    const willReachLimit = form.settings.submissionLimit > 0 && 
+                           (form.stats.totalSubmissions + 1) >= form.settings.submissionLimit;
+    
+    await Form.findByIdAndUpdate(form._id, {
+      $inc: { 'stats.totalSubmissions': 1 },
+      $set: { 
+        'stats.lastSubmissionAt': new Date(),
+        // Auto-deactivate if submission limit reached
+        ...(willReachLimit ? { isActive: false } : {})
+      }
+    });
+    
     res.status(201).json({
       success: true,
       message: 'Form submitted successfully',
       data: {
         submissionId: submission._id,
-        submittedAt: submission.submittedAt
+        submittedAt: submission.submittedAt,
+        formNowInactive: willReachLimit
       }
     });
     
