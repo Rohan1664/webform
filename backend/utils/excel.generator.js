@@ -1,8 +1,7 @@
 const XLSX = require('xlsx');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const FormSubmission = require('../models/FormSubmission.model');
 const FormField = require('../models/FormField.model');
-const Form = require('../models/Form.model'); // Add this import
+const Form = require('../models/Form.model');
 const { formatDate } = require('./helpers');
 
 // Generate Excel file from submissions
@@ -55,33 +54,27 @@ const generateExcel = async (submissions, formFields) => {
   }
 };
 
-// Generate CSV file from submissions
+// Generate CSV file from submissions (IN-MEMORY VERSION - NO FILE WRITING)
 const generateCSV = async (submissions, formFields) => {
   try {
-    // Prepare CSV headers
-    const csvHeaders = [
-      { id: 'submissionId', title: 'Submission ID' },
-      { id: 'submittedAt', title: 'Submitted At' },
-      { id: 'submittedBy', title: 'Submitted By' }
+    // Prepare CSV headers (as strings, not objects)
+    const headers = [
+      'Submission ID',
+      'Submitted At',
+      'Submitted By',
+      ...formFields.map(field => field.label),
+      'Files'
     ];
     
-    // Add form fields as headers
-    formFields.forEach(field => {
-      csvHeaders.push({
-        id: field.name,
-        title: field.label
-      });
-    });
-    
-    // Prepare data
-    const records = submissions.map(submission => {
-      const record = {
-        submissionId: submission._id.toString(),
-        submittedAt: formatDate(submission.submittedAt),
-        submittedBy: submission.submittedBy 
+    // Prepare CSV rows
+    const rows = submissions.map(submission => {
+      const row = [
+        submission._id.toString(),
+        formatDate(submission.submittedAt),
+        submission.submittedBy 
           ? `${submission.submittedBy.firstName} ${submission.submittedBy.lastName} (${submission.submittedBy.email})`
           : 'Anonymous'
-      };
+      ];
       
       // Add form fields data
       formFields.forEach(field => {
@@ -89,33 +82,29 @@ const generateCSV = async (submissions, formFields) => {
           ? submission.submissionData.get(field.name)
           : submission.submissionData[field.name];
         
+        let fieldValue = '';
         if (Array.isArray(value)) {
-          record[field.name] = value.join(', ');
+          fieldValue = value.join(', ');
         } else if (value !== undefined && value !== null) {
-          record[field.name] = value.toString();
-        } else {
-          record[field.name] = '';
+          fieldValue = value.toString();
         }
+        
+        // Escape commas and quotes for CSV
+        if (fieldValue.includes(',') || fieldValue.includes('"')) {
+          fieldValue = `"${fieldValue.replace(/"/g, '""')}"`;
+        }
+        row.push(fieldValue);
       });
       
-      return record;
+      // Add files information
+      const fileNames = submission.files?.map(f => f.originalName).join('; ') || '';
+      row.push(fileNames.includes(',') ? `"${fileNames}"` : fileNames);
+      
+      return row.join(',');
     });
     
-    // Create CSV writer
-    const csvWriter = createCsvWriter({
-      path: 'temp.csv',
-      header: csvHeaders
-    });
-    
-    // Write to file
-    await csvWriter.writeRecords(records);
-    
-    // Read file content
-    const fs = require('fs');
-    const csvContent = fs.readFileSync('temp.csv', 'utf8');
-    
-    // Clean up temp file
-    fs.unlinkSync('temp.csv');
+    // Combine headers and rows
+    const csvContent = [headers.join(','), ...rows].join('\n');
     
     return csvContent;
     
@@ -130,7 +119,6 @@ exports.downloadSubmissionsExcel = async (req, res) => {
   try {
     const { formId } = req.params;
     
-    // Fix: Find Form, not FormSubmission
     const form = await Form.findById(formId);
     
     if (!form) {
@@ -176,12 +164,11 @@ exports.downloadSubmissionsExcel = async (req, res) => {
   }
 };
 
-// Download submissions in CSV format
+// Download submissions in CSV format (UPDATED)
 exports.downloadSubmissionsCSV = async (req, res) => {
   try {
     const { formId } = req.params;
     
-    // Fix: Find Form, not FormSubmission
     const form = await Form.findById(formId);
     
     if (!form) {
@@ -206,14 +193,14 @@ exports.downloadSubmissionsCSV = async (req, res) => {
     // Get form fields
     const formFields = await FormField.find({ formId }).sort('order');
     
-    // Generate CSV content
+    // Generate CSV content (in memory)
     const csvContent = await generateCSV(submissions, formFields);
     
     // Set response headers for file download
     const filename = `${form.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_submissions_${Date.now()}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', Buffer.byteLength(csvContent));
+    res.setHeader('Content-Length', Buffer.byteLength(csvContent, 'utf8'));
     
     res.send(csvContent);
     
