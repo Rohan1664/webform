@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  FaPlus, 
-  FaTrash, 
-  FaGripVertical, 
+import {
+  FaPlus,
+  FaTrash,
+  FaGripVertical,
   FaCopy,
   FaEye,
   FaSave,
-  FaArrowLeft 
+  FaArrowLeft,
+  FaCog,
+  FaChevronDown,
+  FaChevronUp
 } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -16,6 +19,17 @@ import { formAPI } from '../../api/form.api';
 import { FIELD_TYPES, ALLOWED_FILE_TYPES } from '../../utils/constants';
 import toast from 'react-hot-toast';
 import Loader from '../common/Loader';
+
+// Suppress defaultProps warning in development only
+if (process.env.NODE_ENV === 'development') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (args[0] && typeof args[0] === 'string' && args[0].includes('defaultProps will be removed')) {
+      return;
+    }
+    originalError(...args);
+  };
+}
 
 const FormBuilder = () => {
   const navigate = useNavigate();
@@ -27,6 +41,9 @@ const FormBuilder = () => {
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [fields, setFields] = useState([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
+  const [fieldsDropdownOpen, setFieldsDropdownOpen] = useState(false);
   const [formSettings, setFormSettings] = useState({
     allowMultipleSubmissions: false,
     requireLogin: true,
@@ -46,13 +63,13 @@ const FormBuilder = () => {
   // Memoize fetchFormData with all dependencies
   const fetchFormData = useCallback(async () => {
     if (!isEditMode || !formId) return;
-    
+
     try {
       setLoading(true);
       const response = await formAPI.getFormById(formId);
       const form = response.data.form;
       const formFields = response.data.fields;
-      
+
       setFormTitle(form.title || '');
       setFormDescription(form.description || '');
       setFormSettings({
@@ -99,7 +116,7 @@ const FormBuilder = () => {
       fieldType,
       name: `field_${Date.now()}`,
       placeholder: '',
-      options: ['dropdown', 'checkbox', 'radio'].includes(fieldType) 
+      options: ['dropdown', 'checkbox', 'radio'].includes(fieldType)
         ? [{ label: 'Option 1', value: 'option1' }]
         : [],
       validation: {
@@ -123,8 +140,9 @@ const FormBuilder = () => {
       order: fields.length,
       isActive: true
     };
-    
+
     setFields([...fields, newField]);
+    setFieldsDropdownOpen(false);
     toast.success('Field added successfully');
   };
 
@@ -132,7 +150,7 @@ const FormBuilder = () => {
     if (!window.confirm('Are you sure you want to remove this field?')) {
       return;
     }
-    
+
     setFields(fields.filter(field => field._id !== fieldId));
     toast.success('Field removed');
   };
@@ -145,13 +163,13 @@ const FormBuilder = () => {
       label: `${field.label} (Copy)`,
       order: fields.length
     };
-    
+
     setFields([...fields, newField]);
     toast.success('Field duplicated');
   };
 
   const updateField = (fieldId, updates) => {
-    setFields(fields.map(field => 
+    setFields(fields.map(field =>
       field._id === fieldId ? { ...field, ...updates } : field
     ));
   };
@@ -176,7 +194,7 @@ const FormBuilder = () => {
       toast.error('Form title is required');
       return false;
     }
-    
+
     if (fields.length === 0) {
       toast.error('Please add at least one field to the form');
       return false;
@@ -210,13 +228,13 @@ const FormBuilder = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setSubmitting(true);
-    
+
     try {
       const formData = {
         title: formTitle.trim(),
@@ -262,28 +280,28 @@ const FormBuilder = () => {
   const renderFieldEditor = (field) => {
     const isOptionField = ['dropdown', 'checkbox', 'radio'].includes(field.fieldType);
     const isFileField = field.fieldType === 'file';
-    
+
     return (
-      <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-3 p-3 sm:p-4 border border-gray-200 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Field Label"
             value={field.label}
             onChange={(e) => updateField(field._id, { label: e.target.value })}
             required
           />
-          
+
           <Input
             label="Field Name"
             value={field.name}
-            onChange={(e) => updateField(field._id, { 
-              name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') 
+            onChange={(e) => updateField(field._id, {
+              name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_')
             })}
             helperText="Used for data storage (no spaces, lowercase)"
             required
           />
         </div>
-        
+
         <Input
           label="Placeholder Text"
           value={field.placeholder || ''}
@@ -295,10 +313,10 @@ const FormBuilder = () => {
           value={field.helpText || ''}
           onChange={(e) => updateField(field._id, { helpText: e.target.value })}
         />
-        
+
         {isOptionField && (
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700">
               Options
             </label>
             {field.options?.map((option, index) => (
@@ -307,8 +325,8 @@ const FormBuilder = () => {
                   value={option.label}
                   onChange={(e) => {
                     const newOptions = [...field.options];
-                    newOptions[index] = { 
-                      ...newOptions[index], 
+                    newOptions[index] = {
+                      ...newOptions[index],
                       label: e.target.value,
                       value: e.target.value.toLowerCase().replace(/\s+/g, '_')
                     };
@@ -321,8 +339,8 @@ const FormBuilder = () => {
                   value={option.value}
                   onChange={(e) => {
                     const newOptions = [...field.options];
-                    newOptions[index] = { 
-                      ...newOptions[index], 
+                    newOptions[index] = {
+                      ...newOptions[index],
                       value: e.target.value.toLowerCase().replace(/\s+/g, '_')
                     };
                     updateField(field._id, { options: newOptions });
@@ -339,7 +357,7 @@ const FormBuilder = () => {
                   }}
                   className="w-full sm:w-auto"
                 >
-                  <FaTrash className="h-4 w-4" />
+                  <FaTrash className="h-3 w-3" />
                 </Button>
               </div>
             ))}
@@ -349,28 +367,28 @@ const FormBuilder = () => {
               onClick={() => {
                 const newOptions = [
                   ...(field.options || []),
-                  { 
-                    label: `Option ${(field.options?.length || 0) + 1}`, 
-                    value: `option${(field.options?.length || 0) + 1}` 
+                  {
+                    label: `Option ${(field.options?.length || 0) + 1}`,
+                    value: `option${(field.options?.length || 0) + 1}`
                   }
                 ];
                 updateField(field._id, { options: newOptions });
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs"
             >
               Add Option
             </Button>
           </div>
         )}
-        
+
         {isFileField && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Allowed File Types
                 </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
                   {ALLOWED_FILE_TYPES.map((fileType) => (
                     <label key={fileType.value} className="flex items-center">
                       <input
@@ -385,14 +403,14 @@ const FormBuilder = () => {
                             validation: { ...field.validation, fileTypes: newTypes }
                           });
                         }}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="ml-2 text-sm text-gray-900 break-words">{fileType.label}</span>
+                      <span className="ml-2 text-xs text-gray-900 break-words">{fileType.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
-              
+
               <div>
                 <Input
                   label="Max File Size (MB)"
@@ -411,11 +429,11 @@ const FormBuilder = () => {
             </div>
           </div>
         )}
-        
-        <div className="space-y-3 border-t pt-4">
-          <h4 className="text-sm font-medium text-gray-700">Validation Rules</h4>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div className="space-y-2 border-t pt-3">
+          <h4 className="text-xs font-medium text-gray-700">Validation Rules</h4>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -423,11 +441,11 @@ const FormBuilder = () => {
                 onChange={(e) => updateField(field._id, {
                   validation: { ...field.validation, required: e.target.checked }
                 })}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-3.5 w-3.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
               />
-              <span className="ml-2 text-sm text-gray-900">Required field</span>
+              <span className="ml-2 text-xs text-gray-900">Required field</span>
             </label>
-            
+
             {['text', 'textarea', 'email'].includes(field.fieldType) && (
               <>
                 <div className="grid grid-cols-2 gap-2">
@@ -440,7 +458,7 @@ const FormBuilder = () => {
                     })}
                     min="0"
                   />
-                  
+
                   <Input
                     label="Max Length"
                     type="number"
@@ -453,7 +471,7 @@ const FormBuilder = () => {
                 </div>
               </>
             )}
-            
+
             {field.fieldType === 'number' && (
               <div className="grid grid-cols-2 gap-2">
                 <Input
@@ -464,7 +482,7 @@ const FormBuilder = () => {
                     validation: { ...field.validation, min: parseFloat(e.target.value) || null }
                   })}
                 />
-                
+
                 <Input
                   label="Maximum Value"
                   type="number"
@@ -490,52 +508,274 @@ const FormBuilder = () => {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-0">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
           <Button
             variant="outline"
             icon={FaArrowLeft}
             onClick={() => navigate('/admin/forms')}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-sm"
           >
             Back
           </Button>
           <div className="w-full sm:w-auto">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
               {isEditMode ? 'Edit Form' : 'Create New Form'}
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-gray-600 break-words">
-              {isEditMode 
-                ? 'Modify your form configuration' 
+            <p className="mt-1 text-xs sm:text-base text-gray-600 break-words">
+              {isEditMode
+                ? 'Modify your form configuration'
                 : 'Create and customize your form with drag-and-drop fields'}
             </p>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            icon={FaEye} 
+          <Button
+            variant="outline"
+            icon={FaEye}
             onClick={handlePreview}
             disabled={!formId}
             title={!formId ? 'Save the form first to preview' : 'Preview form'}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-sm"
           >
             Preview
           </Button>
-          <Button 
-            variant="primary" 
-            icon={FaSave} 
+          <Button
+            variant="primary"
+            icon={FaSave}
             onClick={handleSubmit}
             loading={submitting}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-sm"
           >
             {isEditMode ? 'Update Form' : 'Save Form'}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Mobile Menu Toggle */}
+      <div className="lg:hidden">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+        >
+          <div className="flex items-center space-x-2">
+            <FaCog className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-900">Form Tools</span>
+          </div>
+          {mobileMenuOpen ? (
+            <FaChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <FaChevronDown className="h-4 w-4 text-gray-500" />
+          )}
+        </button>
+
+        {mobileMenuOpen && (
+          <div className="mt-3 space-y-3">
+            {/* Form Settings Dropdown */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setSettingsDropdownOpen(!settingsDropdownOpen)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50"
+              >
+                <h3 className="text-sm font-medium text-gray-900">Form Settings</h3>
+                {settingsDropdownOpen ? (
+                  <FaChevronUp className="h-3 w-3 text-gray-500" />
+                ) : (
+                  <FaChevronDown className="h-3 w-3 text-gray-500" />
+                )}
+              </button>
+
+              {settingsDropdownOpen && (
+                <div className="p-3 space-y-3">
+                  <Input
+                    label="Form Title"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    placeholder="e.g., Customer Feedback Form"
+                    required
+                  />
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={formDescription}
+                      onChange={(e) => setFormDescription(e.target.value)}
+                      rows={2}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Brief description of the form..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-gray-700">Submission Settings</h4>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formSettings.allowMultipleSubmissions}
+                          onChange={(e) => setFormSettings({
+                            ...formSettings,
+                            allowMultipleSubmissions: e.target.checked
+                          })}
+                          className="h-3.5 w-3.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-xs text-gray-900 break-words">
+                          Allow multiple submissions from same user
+                        </span>
+                      </label>
+
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formSettings.requireLogin}
+                          onChange={(e) => setFormSettings({
+                            ...formSettings,
+                            requireLogin: e.target.checked
+                          })}
+                          className="h-3.5 w-3.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-xs text-gray-900 break-words">
+                          Require login to submit
+                        </span>
+                      </label>
+                    </div>
+
+                    <Input
+                      label="Submission Limit "
+                      type="number"
+                      value={formSettings.submissionLimit === 0 ? '' : formSettings.submissionLimit?.toString() || ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                        setFormSettings({
+                          ...formSettings,
+                          submissionLimit: isNaN(newValue) ? 0 : newValue
+                        });
+                      }}
+                      min="0"
+                      step="1"
+                      placeholder="unlimited"
+                    />
+
+                    {/* <Input
+                      label="Confirmation Message"
+                      value={formSettings.confirmationMessage}
+                      onChange={(e) => setFormSettings({
+                        ...formSettings,
+                        confirmationMessage: e.target.value
+                      })}
+                      placeholder="Thank you for your submission!"
+                    />
+
+                    <Input
+                      label="Redirect URL (optional)"
+                      value={formSettings.redirectUrl}
+                      onChange={(e) => setFormSettings({
+                        ...formSettings,
+                        redirectUrl: e.target.value
+                      })}
+                      placeholder="https://example.com/thank-you"
+                    /> */}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        label="Start Date"
+                        type="datetime-local"
+                        value={formSettings.startDate}
+                        onChange={(e) => setFormSettings({
+                          ...formSettings,
+                          startDate: e.target.value
+                        })}
+                      />
+                      <Input
+                        label="End Date"
+                        type="datetime-local"
+                        value={formSettings.endDate}
+                        onChange={(e) => setFormSettings({
+                          ...formSettings,
+                          endDate: e.target.value
+                        })}
+                      />
+                    </div>
+                  </div>
+{/* 
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-gray-700">Appearance</h4>
+                    <Input
+                      label="Submit Button Text"
+                      value={appearance.submitButtonText}
+                      onChange={(e) => setAppearance({
+                        ...appearance,
+                        submitButtonText: e.target.value
+                      })}
+                      placeholder="Submit"
+                    />
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Primary Color
+                      </label>
+                      <input
+                        type="color"
+                        value={appearance.primaryColor}
+                        onChange={(e) => setAppearance({
+                          ...appearance,
+                          primaryColor: e.target.value
+                        })}
+                        className="h-8 w-full"
+                      />
+                    </div>
+                  </div> */}
+                </div>
+              )}
+            </div>
+
+            {/* Add Fields Dropdown */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setFieldsDropdownOpen(!fieldsDropdownOpen)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50"
+              >
+                <h3 className="text-sm font-medium text-gray-900">Add Fields</h3>
+                {fieldsDropdownOpen ? (
+                  <FaChevronUp className="h-3 w-3 text-gray-500" />
+                ) : (
+                  <FaChevronDown className="h-3 w-3 text-gray-500" />
+                )}
+              </button>
+
+              {fieldsDropdownOpen && (
+                <div className="p-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    {FIELD_TYPES.map((fieldType) => (
+                      <button
+                        key={fieldType.value}
+                        type="button"
+                        onClick={() => addField(fieldType.value)}
+                        className="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                      >
+                        <div className="h-6 w-6 bg-primary-100 rounded-full flex items-center justify-center mb-1">
+                          <span className="text-primary-600 font-medium text-xs">
+                            {fieldType.label.charAt(0)}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-medium text-gray-900 text-center break-words">
+                          {fieldType.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-6">
           <div className="card">
             <div className="card-header">
@@ -549,7 +789,7 @@ const FormBuilder = () => {
                 placeholder="e.g., Customer Feedback Form"
                 required
               />
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Description
@@ -562,7 +802,7 @@ const FormBuilder = () => {
                   placeholder="Brief description of the form..."
                 />
               </div>
-              
+
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-gray-700">Submission Settings</h4>
                 <div className="space-y-2">
@@ -580,7 +820,7 @@ const FormBuilder = () => {
                       Allow multiple submissions from same user
                     </span>
                   </label>
-                  
+
                   <label className="flex items-center">
                     <input
                       type="checkbox"
@@ -598,17 +838,22 @@ const FormBuilder = () => {
                 </div>
 
                 <Input
-                  label="Submission Limit (0 = unlimited)"
+                  label="Submission Limit "
                   type="number"
-                  value={formSettings.submissionLimit}
-                  onChange={(e) => setFormSettings({
-                    ...formSettings,
-                    submissionLimit: parseInt(e.target.value) || 0
-                  })}
+                  value={formSettings.submissionLimit === 0 ? '' : formSettings.submissionLimit?.toString() || ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                    setFormSettings({
+                      ...formSettings,
+                      submissionLimit: isNaN(newValue) ? 0 : newValue
+                    });
+                  }}
                   min="0"
+                  step="1"
+                  placeholder="unlimited"
                 />
 
-                <Input
+                {/* <Input
                   label="Confirmation Message"
                   value={formSettings.confirmationMessage}
                   onChange={(e) => setFormSettings({
@@ -626,7 +871,7 @@ const FormBuilder = () => {
                     redirectUrl: e.target.value
                   })}
                   placeholder="https://example.com/thank-you"
-                />
+                /> */}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
@@ -650,7 +895,7 @@ const FormBuilder = () => {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              {/* <div className="space-y-3">
                 <h4 className="text-sm font-medium text-gray-700">Appearance</h4>
                 <Input
                   label="Submit Button Text"
@@ -661,7 +906,7 @@ const FormBuilder = () => {
                   })}
                   placeholder="Submit"
                 />
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Primary Color
@@ -676,7 +921,7 @@ const FormBuilder = () => {
                     className="h-10 w-full"
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -685,15 +930,15 @@ const FormBuilder = () => {
               <h3 className="text-lg font-medium text-gray-900">Add Fields</h3>
             </div>
             <div className="card-body">
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {FIELD_TYPES.map((fieldType) => (
                   <button
                     key={fieldType.value}
                     type="button"
                     onClick={() => addField(fieldType.value)}
-                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                    className="flex flex-col items-center justify-center p-4 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
                   >
-                    <div className="h-8 w-8 sm:h-10 sm:w-10 bg-primary-100 rounded-full flex items-center justify-center mb-2">
+                    <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center mb-2">
                       <span className="text-primary-600 font-medium text-sm sm:text-base">
                         {fieldType.label.charAt(0)}
                       </span>
@@ -718,14 +963,15 @@ const FormBuilder = () => {
                 Drag and drop to reorder fields
               </p>
             </div>
-            
+
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="fields">
-                {(provided) => (
+                {(provided, snapshot) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="card-body space-y-4"
+                    className={`card-body space-y-4 transition-colors duration-200 ${snapshot.isDraggingOver ? 'bg-primary-50' : ''
+                      }`}
                   >
                     {fields.length === 0 ? (
                       <div className="text-center py-8 sm:py-12">
@@ -746,11 +992,14 @@ const FormBuilder = () => {
                           draggableId={field._id}
                           index={index}
                         >
-                          {(provided) => (
+                          {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className="border border-gray-200 rounded-lg overflow-hidden"
+                              className={`border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 ${snapshot.isDragging
+                                ? 'shadow-lg border-primary-300 bg-white rotate-1 scale-105'
+                                : 'hover:shadow-md'
+                                }`}
                             >
                               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 px-4 py-3 border-b space-y-2 sm:space-y-0">
                                 <div className="flex items-center space-x-3 w-full sm:w-auto">
@@ -790,7 +1039,7 @@ const FormBuilder = () => {
                                   </Button>
                                 </div>
                               </div>
-                              
+
                               <div className="p-4">
                                 {renderFieldEditor(field)}
                               </div>
@@ -805,6 +1054,110 @@ const FormBuilder = () => {
               </Droppable>
             </DragDropContext>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Form Fields Section */}
+      <div className="lg:hidden">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-base font-medium text-gray-900">
+              Form Fields ({fields.length})
+            </h3>
+            <p className="mt-1 text-xs text-gray-600">
+              Drag and drop to reorder fields
+            </p>
+          </div>
+
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="fields-mobile">
+              {(provided, snapshot) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className={`card-body space-y-3 transition-colors duration-200 ${snapshot.isDraggingOver ? 'bg-primary-50' : ''
+                    }`}
+                >
+                  {fields.length === 0 ? (
+                    <div className="text-center py-6">
+                      <div className="mx-auto h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                        <FaPlus className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-1 break-words">
+                        No fields added yet
+                      </h3>
+                      <p className="text-xs text-gray-600 break-words">
+                        Open the Form Tools menu above to add fields
+                      </p>
+                    </div>
+                  ) : (
+                    fields.map((field, index) => (
+                      <Draggable
+                        key={field._id}
+                        draggableId={field._id}
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 ${snapshot.isDragging
+                              ? 'shadow-lg border-primary-300 bg-white'
+                              : 'hover:shadow-md'
+                              }`}
+                          >
+                            <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b">
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="cursor-move text-gray-400 hover:text-gray-600 flex-shrink-0"
+                                >
+                                  <FaGripVertical className="h-4 w-4" />
+                                </div>
+                                <div className="flex items-center space-x-1.5 min-w-0">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-800 flex-shrink-0">
+                                    {field.fieldType}
+                                  </span>
+                                  <span className="text-xs font-medium text-gray-900 truncate">
+                                    {field.label}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-1 flex-shrink-0 ml-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => duplicateField(field)}
+                                  title="Duplicate"
+                                  className="p-1.5"
+                                >
+                                  <FaCopy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeField(field._id)}
+                                  title="Delete"
+                                  className="p-1.5"
+                                >
+                                  <FaTrash className="h-3 w-3 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="p-3">
+                              {renderFieldEditor(field)}
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))
+                  )}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </div>
       </div>
     </div>
