@@ -25,20 +25,25 @@ const FormRenderer = () => {
   const fetchForm = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Fetching form with ID:', formId);
+      
       const response = await formAPI.getFormById(formId);
+      
+      console.log('API Response:', response);
+      console.log('Form data:', response.data.form);
+      console.log('Fields data:', response.data.fields);
+      console.log('Number of fields:', response.data.fields?.length || 0);
 
       setForm(response.data.form);
-      setFields(response.data.fields);
+      setFields(response.data.fields || []);
       setRequiresLogin(response.data.form.settings?.requireLogin !== false);
 
       if (response.data.form.settings?.requireLogin && !isAuthenticated()) {
         setError('Please login to fill this form');
-      } else {
-        setError(null);
       }
     } catch (err) {
-      setError('Failed to load form');
       console.error('Error fetching form:', err);
+      setError(err.response?.data?.message || 'Failed to load form');
     } finally {
       setLoading(false);
     }
@@ -90,7 +95,6 @@ const FormRenderer = () => {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <Alert type="error" title="Error" message={error} />
-
         <div className="mt-4 flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
@@ -100,7 +104,6 @@ const FormRenderer = () => {
           >
             Back to Forms
           </Button>
-
           {error.includes('login') && (
             <Button
               variant="primary"
@@ -124,29 +127,15 @@ const FormRenderer = () => {
             <div className="mx-auto h-14 w-14 sm:h-16 sm:w-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <FaCheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
             </div>
-
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Thank You!
-            </h2>
-
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Thank You!</h2>
             <p className="mt-2 text-sm sm:text-base text-gray-600">
               Your submission has been received successfully.
             </p>
-
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/forms')}
-                className="w-full sm:w-auto justify-center"
-              >
+              <Button variant="outline" onClick={() => navigate('/forms')}>
                 View Other Forms
               </Button>
-
-              <Button
-                variant="primary"
-                onClick={() => setSubmitted(false)}
-                className="w-full sm:w-auto justify-center"
-              >
+              <Button variant="primary" onClick={() => setSubmitted(false)}>
                 Submit Another Response
               </Button>
             </div>
@@ -159,7 +148,6 @@ const FormRenderer = () => {
   return (
     <div className="px-4 sm:px-6 py-4 sm:py-6">
       <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
-
         <Button
           variant="outline"
           icon={FaArrowLeft}
@@ -177,7 +165,7 @@ const FormRenderer = () => {
                 This form requires login. Please{' '}
                 <button
                   onClick={handleLoginRedirect}
-                  className="font-medium underline hover:text-yellow-900 break-words"
+                  className="font-medium underline hover:text-yellow-900"
                 >
                   sign in
                 </button>{' '}
@@ -187,27 +175,32 @@ const FormRenderer = () => {
           </div>
         )}
 
-        <div className="w-full overflow-hidden">
-          <DynamicForm
-            form={form}
-            fields={fields}
-            onSubmit={handleSubmit}
-            submitButtonText={
-              requiresLogin && !isAuthenticated()
-                ? 'Login to Submit'
-                : 'Submit Form'
-            }
-            disabled={requiresLogin && !isAuthenticated()}
-          />
-        </div>
+        {fields.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+            <p className="text-gray-500">This form has no fields configured yet.</p>
+          </div>
+        ) : (
+          <div className="w-full overflow-hidden">
+            <DynamicForm
+              form={form}
+              fields={fields}
+              onSubmit={handleSubmit}
+              submitButtonText={
+                requiresLogin && !isAuthenticated()
+                  ? 'Login to Submit'
+                  : 'Submit Form'
+              }
+              disabled={requiresLogin && !isAuthenticated()}
+            />
+          </div>
+        )}
 
-        <div className="text-center text-xs sm:text-sm text-gray-500 break-words">
+        <div className="text-center text-xs sm:text-sm text-gray-500">
           <p>
             This form was created by{' '}
             {form.createdBy?.firstName} {form.createdBy?.lastName}
           </p>
         </div>
-
       </div>
     </div>
   );

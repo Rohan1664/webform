@@ -41,7 +41,7 @@ const formSchema = new mongoose.Schema({
     submissionLimit: {
       type: Number,
       min: 0,
-      default: 0 // 0 means unlimited
+      default: 0
     },
     startDate: {
       type: Date
@@ -96,13 +96,11 @@ const formSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Update updatedAt before save
 formSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Virtual populate for fields
 formSchema.virtual('fields', {
   ref: 'FormField',
   localField: '_id',
@@ -110,24 +108,20 @@ formSchema.virtual('fields', {
   options: { sort: { order: 1 } }
 });
 
-// Virtual for submissions
 formSchema.virtual('submissions', {
   ref: 'FormSubmission',
   localField: '_id',
   foreignField: 'formId'
 });
 
-// Check if form is accepting submissions
 formSchema.methods.isAcceptingSubmissions = function() {
   const now = new Date();
   
   if (!this.isActive) return false;
   
-  // Check date restrictions
   if (this.settings.startDate && now < this.settings.startDate) return false;
   if (this.settings.endDate && now > this.settings.endDate) return false;
   
-  // Check submission limit
   if (this.settings.submissionLimit > 0 && 
       this.stats.totalSubmissions >= this.settings.submissionLimit) {
     return false;
@@ -136,19 +130,16 @@ formSchema.methods.isAcceptingSubmissions = function() {
   return true;
 };
 
-// Virtual for checking if form has reached submission limit
 formSchema.virtual('hasReachedSubmissionLimit').get(function() {
   return this.settings.submissionLimit > 0 && 
          this.stats.totalSubmissions >= this.settings.submissionLimit;
 });
 
-// Virtual for remaining submissions
 formSchema.virtual('remainingSubmissions').get(function() {
-  if (this.settings.submissionLimit <= 0) return -1; // Unlimited
+  if (this.settings.submissionLimit <= 0) return -1;
   return Math.max(0, this.settings.submissionLimit - this.stats.totalSubmissions);
 });
 
-// Indexes for faster queries
 formSchema.index({ createdBy: 1, createdAt: -1 });
 formSchema.index({ isActive: 1 });
 formSchema.index({ 'settings.startDate': 1, 'settings.endDate': 1 });

@@ -6,29 +6,11 @@ const roleCheck = require('../middleware/role.middleware');
 const validate = require('../middleware/validation.middleware');
 const { formValidator } = require('../utils/validators');
 
-// ==================== Public Routes ====================
-
-/**
- * @route   GET /api/forms
- * @desc    Get all active forms with pagination and search
- * @access  Public (with optional auth)
- */
+// Public Routes
 router.get('/', optionalAuth, formController.getAllForms);
-
-/**
- * @route   GET /api/forms/:formId
- * @desc    Get single form by ID with its fields
- * @access  Public (with optional auth)
- */
 router.get('/:formId', optionalAuth, formController.getFormById);
 
-// ==================== Protected Admin Routes ====================
-
-/**
- * @route   POST /api/forms
- * @desc    Create a new form
- * @access  Private/Admin
- */
+// Protected Admin Routes
 router.post('/', 
   authenticate, 
   roleCheck('admin'), 
@@ -36,11 +18,6 @@ router.post('/',
   formController.createForm
 );
 
-/**
- * @route   PUT /api/forms/:formId
- * @desc    Update an existing form
- * @access  Private/Admin
- */
 router.put('/:formId', 
   authenticate, 
   roleCheck('admin'), 
@@ -48,26 +25,51 @@ router.put('/:formId',
   formController.updateForm
 );
 
-/**
- * @route   PATCH /api/forms/:formId/toggle-status
- * @desc    Toggle form active status
- * @access  Private/Admin
- */
 router.patch('/:formId/toggle-status', 
   authenticate, 
   roleCheck('admin'), 
   formController.toggleFormStatus
 );
 
-/**
- * @route   DELETE /api/forms/:formId
- * @desc    Soft delete a form (set isActive to false)
- * @access  Private/Admin
- */
 router.delete('/:formId', 
   authenticate, 
   roleCheck('admin'), 
   formController.deleteForm
 );
+
+// Debug Routes (Remove in Production)
+router.get('/debug/fields/:formId', authenticate, roleCheck('admin'), async (req, res) => {
+  try {
+    const connectDB = require('../config/db');
+    const Form = require('../models/Form.model');
+    const FormField = require('../models/FormField.model');
+    
+    await connectDB();
+    
+    const form = await Form.findById(req.params.formId);
+    const fields = await FormField.find({ formId: req.params.formId });
+    
+    res.json({
+      success: true,
+      data: {
+        form: {
+          id: form?._id,
+          title: form?.title,
+          isActive: form?.isActive
+        },
+        fields: fields.map(f => ({
+          id: f._id,
+          label: f.label,
+          name: f.name,
+          fieldType: f.fieldType,
+          isActive: f.isActive
+        })),
+        fieldsCount: fields.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 module.exports = router;
