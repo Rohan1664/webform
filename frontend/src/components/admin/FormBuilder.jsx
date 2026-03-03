@@ -668,7 +668,7 @@ const FormBuilder = () => {
                       helperText="Set 0 for unlimited submissions"
                     />
 
-                    <Input
+                    {/* <Input
                       label="Confirmation Message"
                       value={formSettings.confirmationMessage}
                       onChange={(e) => setFormSettings({
@@ -686,7 +686,7 @@ const FormBuilder = () => {
                         redirectUrl: e.target.value
                       })}
                       placeholder="https://example.com/thank-you"
-                    />
+                    /> */}
 
                     <div className="grid grid-cols-2 gap-2">
                       <Input
@@ -710,7 +710,7 @@ const FormBuilder = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <h4 className="text-xs font-medium text-gray-700">Appearance</h4>
                     <Input
                       label="Submit Button Text"
@@ -736,7 +736,7 @@ const FormBuilder = () => {
                         className="h-8 w-full"
                       />
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               )}
             </div>
@@ -863,7 +863,7 @@ const FormBuilder = () => {
                   helperText="Set 0 for unlimited submissions"
                 />
 
-                <Input
+                {/* <Input
                   label="Confirmation Message"
                   value={formSettings.confirmationMessage}
                   onChange={(e) => setFormSettings({
@@ -881,7 +881,7 @@ const FormBuilder = () => {
                     redirectUrl: e.target.value
                   })}
                   placeholder="https://example.com/thank-you"
-                />
+                /> */}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
@@ -905,7 +905,7 @@ const FormBuilder = () => {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              {/* <div className="space-y-3">
                 <h4 className="text-sm font-medium text-gray-700">Appearance</h4>
                 <Input
                   label="Submit Button Text"
@@ -931,7 +931,7 @@ const FormBuilder = () => {
                     className="h-10 w-full"
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
 
