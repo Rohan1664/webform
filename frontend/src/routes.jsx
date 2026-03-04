@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import Layout from './components/layout/Layout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
 import HomePage from './pages/HomePage';
 import AdminPages from './pages/AdminPages';
 import UserPages from './pages/UserPages';
@@ -108,6 +109,7 @@ const AppRoutes = () => {
           </PublicOnlyRoute>
         }
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Protected User Routes */}
       <Route element={<ProtectedRoute />}>
