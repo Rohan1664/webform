@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
+// Remove useAuth since it's not used
+// import { useAuth } from '../../context/AuthContext';
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
+import { AiFillGithub } from 'react-icons/ai';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
+import OTPVerification from './OTPVerification';
 import { validateEmail, validatePassword } from '../../utils/validators';
+import { otpAPI } from '../../api/otp.api';
+import toast from 'react-hot-toast';
 
 const Register = () => {
+  const [step, setStep] = useState('register'); // 'register' or 'verify'
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,9 +26,6 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const { register } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,7 +81,7 @@ const Register = () => {
     return newErrors;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSendOTP = async (e) => {
     e.preventDefault();
     
     const validationErrors = validateForm();
@@ -96,25 +100,42 @@ const Register = () => {
         password: formData.password,
       };
       
-      const result = await register(userData);
-      if (result.success) {
-        navigate('/');
-      }
+      await otpAPI.sendOTP(userData);
+      setStep('verify');
+      toast.success('OTP sent to your email!');
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Send OTP error:', error);
+      toast.error(error.response?.data?.message || 'Failed to send OTP');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleBackToRegister = () => {
+    setStep('register');
   };
 
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
+  const handleGoogleLogin = () => {
+    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    window.location.href = `${backendUrl}/api/auth/google`;
   };
 
+  const handleGitHubLogin = () => {
+    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    window.location.href = `${backendUrl}/api/auth/github`;
+  };
+
+  // If in verification step, show OTP component
+  if (step === 'verify') {
+    return (
+      <OTPVerification 
+        userData={{ email: formData.email }}
+        onBack={handleBackToRegister}
+      />
+    );
+  }
+
+  // Registration form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
@@ -136,7 +157,7 @@ const Register = () => {
         <div className="card w-full">
           <div className="card-body p-5 sm:p-6">
             
-            <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-5 sm:space-y-6" onSubmit={handleSendOTP}>
               
               {/* Name Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -197,7 +218,7 @@ const Register = () => {
                 />
                 <button
                   type="button"
-                  onClick={togglePasswordVisibility}
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700 focus:outline-none"
                   tabIndex="-1"
                 >
@@ -221,7 +242,7 @@ const Register = () => {
                 />
                 <button
                   type="button"
-                  onClick={toggleConfirmPasswordVisibility}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700 focus:outline-none"
                   tabIndex="-1"
                 >
@@ -257,17 +278,17 @@ const Register = () => {
                 loading={isLoading}
                 className="w-full"
               >
-                Create account
+                Continue
               </Button>
               
               {isLoading && (
                 <div className="text-center">
-                  <Loader size="sm" text="Creating account..." />
+                  <Loader size="sm" text="Sending OTP..." />
                 </div>
               )}
             </form>
 
-            {/* OAuth Section */}
+            {/* Divider */}
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -280,25 +301,22 @@ const Register = () => {
                 </div>
               </div>
               
+              {/* OAuth Buttons */}
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
-                    window.location.href = `${backendUrl}/api/auth/google`;
-                  }}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+                  onClick={handleGoogleLogin}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
+                  <FcGoogle className="h-5 w-5" />
                   Google
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const backendUrl = (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '');
-                    window.location.href = `${backendUrl}/api/auth/github`;
-                  }}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+                  onClick={handleGitHubLogin}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
+                  <AiFillGithub className="h-5 w-5" />
                   GitHub
                 </button>
               </div>

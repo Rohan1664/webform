@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FaEnvelope, FaLock, FaExclamationCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
+import { AiFillGithub } from 'react-icons/ai';
 import Input from '../common/Input';
 import Button from '../common/Button';
 import Loader from '../common/Loader';
@@ -17,11 +19,11 @@ const Login = () => {
   const [apiError, setApiError] = useState('');
   const [apiErrorType, setApiErrorType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const from = location.state?.from?.pathname || '/';
 
   const handleChange = (e) => {
@@ -30,14 +32,14 @@ const Login = () => {
       ...prev,
       [name]: value,
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: '',
       }));
     }
-    
+
     if (apiError) {
       setApiError('');
       setApiErrorType('');
@@ -50,38 +52,38 @@ const Login = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     }
-    
+
     return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     setApiError('');
     setApiErrorType('');
     setErrors({});
-    
+
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.success) {
         navigate(from, { replace: true });
       } else {
@@ -109,7 +111,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
-        
+
         {/* Header */}
         <div className="text-center px-2">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
@@ -125,11 +127,11 @@ const Login = () => {
             </Link>
           </p>
         </div>
-        
+
         {/* Card */}
         <div className="card w-full">
           <div className="card-body p-5 sm:p-6">
-            
+
             {/* Email not found */}
             {apiError && apiErrorType === 'email_not_found' && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
@@ -138,8 +140,8 @@ const Login = () => {
                   <div className="text-sm">
                     <p className="font-medium text-blue-800">Account not found</p>
                     <p className="text-blue-700 mt-1">{apiError}</p>
-                    <Link 
-                      to="/register" 
+                    <Link
+                      to="/register"
                       className="font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
                     >
                       Create a new account →
@@ -148,7 +150,7 @@ const Login = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Invalid password */}
             {apiError && apiErrorType === 'invalid_password' && (
               <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -157,8 +159,8 @@ const Login = () => {
                   <div className="text-sm">
                     <p className="font-medium text-yellow-800">Incorrect password</p>
                     <p className="text-yellow-700 mt-1">{apiError}</p>
-                    <Link 
-                      to="/forgot-password" 
+                    <Link
+                      to="/forgot-password"
                       className="font-medium text-primary-600 hover:text-primary-500 mt-2 inline-block"
                     >
                       Forgot your password? →
@@ -167,17 +169,17 @@ const Login = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Generic error */}
             {apiError && apiErrorType === 'generic' && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{apiError}</p>
               </div>
             )}
-            
+
             {/* Form */}
             <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
-              
+
               <Input
                 label="Email address"
                 name="email"
@@ -190,7 +192,7 @@ const Login = () => {
                 required
                 autoComplete="email"
               />
-              
+
               <div className="relative">
                 <Input
                   label="Password"
@@ -225,7 +227,7 @@ const Login = () => {
                   </Link>
                 </div>
               </div>
-              
+
               <Button
                 type="submit"
                 variant="primary"
@@ -235,14 +237,14 @@ const Login = () => {
               >
                 Sign in
               </Button>
-              
+
               {isLoading && (
                 <div className="text-center">
                   <Loader size="sm" text="Signing in..." />
                 </div>
               )}
             </form>
-            
+
             {/* Divider */}
             <div className="mt-6">
               <div className="relative">
@@ -255,28 +257,30 @@ const Login = () => {
                   </span>
                 </div>
               </div>
-              
-              {/* OAuth Buttons */}
+
+              {/* OAuth Buttons with Logos */}
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
+                  <FcGoogle className="h-5 w-5" />
                   Google
                 </button>
                 <button
                   type="button"
                   onClick={handleGitHubLogin}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
+                  <AiFillGithub className="h-5 w-5 text-gray-900" />
                   GitHub
                 </button>
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Footer */}
         <div className="text-center px-2">
           <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
