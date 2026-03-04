@@ -39,6 +39,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // New fields for email verification
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerifiedAt: {
+    type: Date
+  },
   lastLogin: {
     type: Date
   },

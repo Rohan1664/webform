@@ -6,10 +6,10 @@ const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 
-// Load environment variables - THIS MUST COME FIRST
+// Load environment variables
 dotenv.config();
 
-// Debug: Log environment variables (without secrets)
+// Debug: Log environment variables
 console.log('🔍 Server Environment Check:');
 console.log('  NODE_ENV:', process.env.NODE_ENV);
 console.log('  PORT:', process.env.PORT);
@@ -18,11 +18,9 @@ console.log('  GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '�
 console.log('  GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID ? '✅ Set' : '❌ Not set');
 console.log('  BACKEND_URL:', process.env.BACKEND_URL || 'http://localhost:5000');
 console.log('  FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost:3000');
+console.log('  EMAIL_USER:', process.env.EMAIL_USER ? '✅ Set' : '❌ Not set');
 
-// NOW import passport AFTER env vars are loaded
 const passport = require('./config/passport');
-
-// Import database connection
 const connectDB = require('./config/db');
 
 // Import routes
@@ -30,14 +28,15 @@ const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const formRoutes = require('./routes/form.routes');
 const submissionRoutes = require('./routes/submission.routes');
+const otpRoutes = require('./routes/otp.routes');
+const passwordRoutes = require('./routes/password.routes'); // ADDED
 
 // Import middleware
 const { errorHandler, notFound } = require('./middleware/error.middleware');
 
-// Initialize Express app
 const app = express();
 
-// Rate limiting (disable for serverless or configure appropriately)
+// Rate limiting
 if (process.env.NODE_ENV !== 'production') {
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -60,14 +59,14 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Session configuration for OAuth
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-session-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -80,11 +79,11 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Body parsing middleware
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Database connection middleware for serverless
+// Database connection middleware
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -93,13 +92,12 @@ app.use(async (req, res, next) => {
     console.error('Database connection error:', error);
     res.status(500).json({
       success: false,
-      message: 'Database connection failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Database connection failed'
     });
   }
 });
 
-// Debug middleware to log all requests to auth routes
+// Debug middleware
 app.use('/api/auth', (req, res, next) => {
   console.log(`🔐 Auth Route Accessed: ${req.method} ${req.url}`);
   next();
@@ -110,8 +108,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/otp', otpRoutes);
+app.use('/api/password', passwordRoutes); // ADDED
 
-// Health check endpoint
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -133,6 +133,8 @@ app.get('/', (req, res) => {
       admin: '/api/admin',
       forms: '/api/forms',
       submissions: '/api/submissions',
+      otp: '/api/otp',
+      password: '/api/password', // ADDED
       health: '/api/health'
     }
   });
@@ -141,7 +143,7 @@ app.get('/', (req, res) => {
 // 404 handler
 app.use(notFound);
 
-// Error handling middleware
+// Error handling
 app.use(errorHandler);
 
 // For local development
